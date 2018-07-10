@@ -1,5 +1,6 @@
 .PHONY: build publish
 
+REGISTRY: 
 
 all: build
 
