@@ -4,6 +4,9 @@ set -e
 
 umask 022
 
+ZIPKIN_PORT=${ZIPKIN_PORT:-9411}
+ZIPKIN_HOST=${ZIPKIN_HOST:-zipkin}
+
 if ! getent passwd omnition-proxy >/dev/null; then
     groupadd --gid 1337 omnition-proxy
     useradd --uid 1337 --gid 1337 -d /var/lib/omnition omnition-proxy
@@ -27,6 +30,7 @@ chmod o+rx /usr/local/bin/envoy
 chmod 2755 /usr/local/bin/envoy
 chgrp omnition-proxy /usr/local/bin/envoy
 
+sed -e "s/<ZIPKIN_HOST>/$ZIPKIN_HOST/g" -e "s/<ZIPKIN_PORT>/$ZIPKIN_PORT/g" /etc/envoy_tmpl.yaml > /etc/envoy.yaml
 echo "starting envoy"
 sg omnition-proxy -c "envoy -c /etc/envoy.yaml --v2-config-only"
 

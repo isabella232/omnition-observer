@@ -42,8 +42,8 @@ static_resources:
     lb_policy: round_robin
     hosts:
     - socket_address:
-        address: zipkin
-        port_value: 9411
+        address: <ZIPKIN_HOST>
+        port_value: <ZIPKIN_PORT>
 
 tracing:
   http:

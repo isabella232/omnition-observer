@@ -8,7 +8,7 @@ RUN apt update && apt-get install -y \
 ADD scripts/*.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/*.sh
 
-ADD envoy.yaml /etc/envoy.yaml
+ADD envoy_tmpl.yaml /etc/envoy_tmpl.yaml
 
 EXPOSE 15001
 EXPOSE 9901
