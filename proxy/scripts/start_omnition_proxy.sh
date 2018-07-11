@@ -6,6 +6,7 @@ umask 022
 
 ZIPKIN_PORT=${ZIPKIN_PORT:-9411}
 ZIPKIN_HOST=${ZIPKIN_HOST:-'zipkin'}
+SERVICE_NAME=${SERVICE_NAME:-'unknown-service'}
 
 echo "setting up roles"
 if ! getent passwd omnition-proxy >/dev/null; then
@@ -42,7 +43,7 @@ if [ $1 = "show-config" ];
 elif [ $1 = "run" ]
   then
   echo "starting envoy"
-  sg omnition-proxy -c "envoy -c /etc/envoy.yaml --v2-config-only"
+  sg omnition-proxy -c "envoy -c /etc/envoy.yaml --v2-config-only --service-cluster $SERVICE_NAME"
 else
   $1
 fi
