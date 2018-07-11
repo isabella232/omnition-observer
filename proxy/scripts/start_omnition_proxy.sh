@@ -30,7 +30,10 @@ chmod o+rx /usr/local/bin/envoy
 chmod 2755 /usr/local/bin/envoy
 chgrp omnition-proxy /usr/local/bin/envoy
 
-sed -e "s/<ZIPKIN_HOST>/$ZIPKIN_HOST/g" -e "s/<ZIPKIN_PORT>/$ZIPKIN_PORT/g" /etc/envoy_tmpl.yaml > /etc/envoy.yaml
+ZIPKIN_PORT_ESCAPED=$(echo $ZIPKIN_PORT | sed -e 's#/#\\\/#g')
+ZIPKIN_HOST_ESCAPED=$(echo $ZIPKIN_HOST | sed -e 's#/#\\\/#g')
+
+sed -e "s/<ZIPKIN_HOST>/$ZIPKIN_HOST_ESCAPED/g" -e "s/<ZIPKIN_PORT>/$ZIPKIN_PORT_ESCAPED/g" /etc/envoy_tmpl.yaml > /etc/envoy.yaml
 echo "starting envoy"
 sg omnition-proxy -c "envoy -c /etc/envoy.yaml --v2-config-only"
 
