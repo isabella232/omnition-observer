@@ -14,3 +14,4 @@ EXPOSE 15001
 EXPOSE 9901
 
 ENTRYPOINT ["/usr/local/bin/start_omnition_proxy.sh"]
+CMD ["run"]
