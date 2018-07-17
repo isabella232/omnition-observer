@@ -3,6 +3,7 @@ FROM envoyproxy/envoy:v1.7.0
 RUN apt update && apt-get install -y \
     iproute2 \
     iptables \
+    gettext-base \
 && rm -rf /var/lib/apt/lists/*
 
 ADD scripts/*.sh /usr/local/bin/

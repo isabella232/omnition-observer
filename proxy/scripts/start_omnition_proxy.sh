@@ -4,9 +4,9 @@ set -e
 
 umask 022
 
-ZIPKIN_PORT=${ZIPKIN_PORT:-9411}
-ZIPKIN_HOST=${ZIPKIN_HOST:-'zipkin'}
-SERVICE_NAME=${SERVICE_NAME:-'unknown-service'}
+export ZIPKIN_HOST=${ZIPKIN_HOST:-'zipkin'}
+export ZIPKIN_PORT=${ZIPKIN_PORT:-9411}
+export SERVICE_NAME=${SERVICE_NAME:-'unknown-service'}
 
 echo "setting up roles"
 if ! getent passwd omnition-proxy >/dev/null; then
@@ -32,10 +32,12 @@ chmod o+rx /usr/local/bin/envoy
 chmod 2755 /usr/local/bin/envoy
 chgrp omnition-proxy /usr/local/bin/envoy
 
-ZIPKIN_PORT_ESCAPED=$(echo $ZIPKIN_PORT | sed -e 's#/#\\\/#g')
-ZIPKIN_HOST_ESCAPED=$(echo $ZIPKIN_HOST | sed -e 's#/#\\\/#g')
+#ZIPKIN_PORT_ESCAPED=$(echo $ZIPKIN_PORT | sed -e 's#/#\\\/#g')
+#ZIPKIN_HOST_ESCAPED=$(echo $ZIPKIN_HOST | sed -e 's#/#\\\/#g')
 
-sed -e "s/<ZIPKIN_HOST>/$ZIPKIN_HOST_ESCAPED/g" -e "s/<ZIPKIN_PORT>/$ZIPKIN_PORT_ESCAPED/g" /etc/envoy_tmpl.yaml > /etc/envoy.yaml
+#sed -e "s/<ZIPKIN_HOST>/$ZIPKIN_HOST_ESCAPED/g" -e "s/<ZIPKIN_PORT>/$ZIPKIN_PORT_ESCAPED/g" /etc/envoy_tmpl.yaml > /etc/envoy.yaml
+
+envsubst < /etc/envoy_tmpl.yaml > /etc/envoy.yaml
 
 if [ $1 = "show-config" ];
   then
