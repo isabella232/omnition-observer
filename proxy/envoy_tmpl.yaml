@@ -5,7 +5,7 @@ admin:
 
 static_resources:
   listeners:
-  - name: iptables_listener
+  - name: omnition_listener
     address:
       socket_address: { address: 0.0.0.0, port_value: 15001 }
     listener_filters:
@@ -14,27 +14,40 @@ static_resources:
     - filters:
       - name: envoy.http_connection_manager
         config:
-          stat_prefix: iptables
-          codec_type: auto
+          stat_prefix: omnition
+          codec_type: AUTO
           generate_request_id: true
           tracing:
             operation_name: egress
           route_config:
-              name: iptables_route
+              name: http_route
               virtual_hosts:
-              - name: iptables_vhost
+              - name: http_vhost
                 domains: ["*"]
                 routes:
-                - match: { prefix: "/" }
-                  route: { cluster: iptables_cluster }
+                - match:
+                    prefix: "/"
+                    headers:
+                      - name: content-type
+                        value: application/grpc
+                  route: { cluster: http2_cluster }
+                - match:
+                    prefix: "/"
+                  route: { cluster: http_cluster }
           http_filters:
             - name: envoy.router
 
   clusters:
-  - name: iptables_cluster
+  - name: http_cluster
     connect_timeout: 0.25s
     type: ORIGINAL_DST
     lb_policy: ORIGINAL_DST_LB
+
+  - name: http2_cluster
+    connect_timeout: 0.25s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+    http2_protocol_options: {}
 
   - name: zipkin_cluster
     connect_timeout: 1s
