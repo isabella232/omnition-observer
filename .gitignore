@@ -1,0 +1,10 @@
+containers/proxy/bin/
+
+envoy_filter/caches/
+envoy_filter/build/
+
+bazel-bin
+bazel-genfiles
+bazel-out
+bazel-source
+bazel-testlogs
