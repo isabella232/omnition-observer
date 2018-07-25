@@ -17,6 +17,9 @@ all: build
 echo-mode:
 	@echo $(MODE)
 
+pull-build-image:
+	docker pull envoyproxy/envoy-build
+
 docker-run:
 	docker run -d -it --rm --name="$(CONTAINER_NAME)" -v "$(CURDIR)":/source -v "$(CURDIR)/caches/home/.cache":"/root/.cache" -e HOST_USERID=`id -u` -e HOST_GROUPID=`id -g` envoyproxy/envoy-build bash
 	$(MAKE) docker-exec DOCKER_CMD=$(DOCKER_CMD)
