@@ -21,7 +21,7 @@ pull-build-image:
 	docker pull envoyproxy/envoy-build
 
 docker-run:
-	docker run -d -it --rm --name="$(CONTAINER_NAME)" -v "$(CURDIR)":/source -v "$(CURDIR)/caches/home/.cache":"/root/.cache" -e HOST_USERID=`id -u` -e HOST_GROUPID=`id -g` envoyproxy/envoy-build bash
+	docker run -d -it --name="$(CONTAINER_NAME)" -v "$(CURDIR)":/source -v "$(CURDIR)/caches/home/.cache":"/root/.cache" -e HOST_USERID=`id -u` -e HOST_GROUPID=`id -g` envoyproxy/envoy-build bash
 	$(MAKE) docker-exec DOCKER_CMD=$(DOCKER_CMD)
 
 docker-exec:
@@ -29,6 +29,7 @@ docker-exec:
 
 docker-stop:
 	docker stop $(CONTAINER_NAME)
+	docker rm $(CONTAINER_NAME)
 
 sh:
 	@$(MAKE) $(MODE) COMMAND="bash"
