@@ -1,63 +1,50 @@
-# Omnition L7 Inspector
+## A collection of [Envoy](envoyproxy.io) proxy filter examples
+
+### License
+
+This work is is licensed in [MIT](LICENSE). While Envoy is licensed in [Apache License 2.0](https://github.com/envoyproxy/envoy/blob/master/LICENSE).
 
 
-## Installation 
 
-L7 inspector can be installed as a sidecar to your application pods by adding a few lines to your apps' kubernetes yaml definitions.
 
-### Example Pod Spec
+### Using git proxy
+
+- Add alias for the misbehaving repository to `~/.gitconfig`
 
 ```
-spec:
-  ...
-  containers:
-    ... your app container(s)
-
-    # Omnition L7 Proxy Container
-    - name: omnition-proxy
-      image: 592865182265.dkr.ecr.us-west-2.amazonaws.com/omnition/proxy:latest
-      env:
-        - name: ZIPKIN_HOST
-          value: "<ZIPKIN_HOST>"
-        - name: ZIPKIN_PORT
-          value: "<ZIPKIN_PORT>"
-        - name: SERVICE_NAME
-          value: "<SERVICE_NAME>"
-
-  initContainers:
-    ... your init container(s)
-
-    # Omnition Init container
-    - args:
-      image: 592865182265.dkr.ecr.us-west-2.amazonaws.com/omnition/proxy-init:latest
-      name: omnition-proxy-init
-      securityContext:
-        capabilities:
-          add:
-          - NET_ADMIN
-        privileged: true
+[url "http://localhost:8000/google/boringssl"]
+        insteadOf = https://github.com/google/boringssl
 ```
 
-Here we injected two containers in the pod. An init-container and a proxy container. The init-container runs before everything else and sets up networking routing rules that route all traffic in and out of the pod through the proxy.
-
-## Configuration
-
-The containers can be configured through environment variables. Currently supported variables are:
-
-#### ZIPKIN_HOST
-
-Default value: `zipkin.opsoss.svc.cluster.local`
-
-This address at which zipkin is listening for new traces.
+- ____mention how to isntall and setup git server
 
 
-#### ZIPKIN_PORT
+```
+```
 
-Default value: `9411`
+- Fetch shallow clones
 
-This port on which zipkin is listening for new traces.
+```
+git clone github.com/google/boringssl --shallow
+```
 
 
-#### SERVICE_NAME
+- Convert shallow to full clone
 
-This gives the service a label in zipkin/jaeger instead of using service's IP address.
+```
+cd boringssl
+git fetch --unshallow
+git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+git fetch origin
+git pull origin '*:*'
+```
+
+- Push to local "proxy" server
+
+```
+git push http://localhost:8000/google/boringssl '*:*'
+git push http://localhost:8000/google/boringssl --all
+```
+
+
+

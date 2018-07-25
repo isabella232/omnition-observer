@@ -6,6 +6,7 @@ RUN apt update && apt-get install -y \
     gettext-base \
 && rm -rf /var/lib/apt/lists/*
 
+ADD bin/envoy /usr/local/bin/
 ADD scripts/*.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/*.sh
 

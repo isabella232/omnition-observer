@@ -32,11 +32,6 @@ chmod o+rx /usr/local/bin/envoy
 chmod 2755 /usr/local/bin/envoy
 chgrp omnition-proxy /usr/local/bin/envoy
 
-#ZIPKIN_PORT_ESCAPED=$(echo $ZIPKIN_PORT | sed -e 's#/#\\\/#g')
-#ZIPKIN_HOST_ESCAPED=$(echo $ZIPKIN_HOST | sed -e 's#/#\\\/#g')
-
-#sed -e "s/<ZIPKIN_HOST>/$ZIPKIN_HOST_ESCAPED/g" -e "s/<ZIPKIN_PORT>/$ZIPKIN_PORT_ESCAPED/g" /etc/envoy_tmpl.yaml > /etc/envoy.yaml
-
 envsubst < /etc/envoy_tmpl.yaml > /etc/envoy.yaml
 
 if [ $1 = "show-config" ];
@@ -45,7 +40,7 @@ if [ $1 = "show-config" ];
 elif [ $1 = "run" ]
   then
   echo "starting envoy"
-  sg omnition-proxy -c "envoy -c /etc/envoy.yaml --v2-config-only --service-cluster $SERVICE_NAME"
+  sg omnition-proxy -c "envoy -c /etc/envoy.yaml -l info --v2-config-only --service-cluster $SERVICE_NAME"
 else
   $1
 fi

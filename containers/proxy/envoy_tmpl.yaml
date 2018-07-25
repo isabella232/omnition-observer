@@ -1,0 +1,109 @@
+admin:
+  access_log_path: /tmp/admin_access.log
+  address:
+    socket_address: { address: 0.0.0.0, port_value: 9901 }
+
+static_resources:
+  listeners:
+  - name: omnition_listener
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 15001 }
+    transparent: true
+    listener_filters:
+      - name: envoy.listener.original_dst
+      - name: envoy.listener.text_protocol_inspector
+      - name: envoy.listener.tls_inspector
+
+    filter_chains:
+
+    - filter_chain_match: {application_protocols: "http/1.1"}
+      filters:
+        - name: envoy.http_connection_manager
+          config:
+            stat_prefix: omnition
+            codec_type: AUTO
+            generate_request_id: true
+            use_remote_address: true
+            tracing:
+              operation_name: egress
+            route_config:
+                name: http_route
+                virtual_hosts:
+                - name: http_vhost
+                  domains: ["*"]
+                  routes:
+                  - match:
+                      prefix: "/"
+                    route: { cluster: http_cluster }
+            http_filters:
+            - name: envoy.grpc_http1_bridge
+              config: {}
+            - name: envoy.router
+              config: {}
+
+    - filter_chain_match: {application_protocols: "http/2"}
+      filters:
+        - name: envoy.http_connection_manager
+          config:
+            stat_prefix: omnition
+            codec_type: AUTO
+            generate_request_id: true
+            use_remote_address: true
+            tracing:
+              operation_name: egress
+            route_config:
+                name: http2_route
+                virtual_hosts:
+                - name: http2_vhost
+                  domains: ["*"]
+                  routes:
+
+                  - match:
+                      prefix: "/"
+                    route: { cluster: http2_cluster }
+
+            http_filters:
+            - name: envoy.grpc_http1_bridge
+              config: {}
+            - name: envoy.router
+              config: {}
+
+    - filters:
+      - name: envoy.tcp_proxy
+        config:
+          stat_prefix: ingress_tcp
+          cluster: tcp_cluster
+
+  clusters:
+  - name: http_cluster
+    connect_timeout: 0.25s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+
+  - name: http2_cluster
+    connect_timeout: 0.25s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+    features: "http2"
+    http2_protocol_options: {}
+
+  - name: tcp_cluster
+    connect_timeout: 0.25s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+
+  - name: zipkin_cluster
+    connect_timeout: 1s
+    type: strict_dns
+    lb_policy: round_robin
+    hosts:
+    - socket_address:
+        address: ${ZIPKIN_HOST}
+        port_value: ${ZIPKIN_PORT}
+
+tracing:
+  http:
+    name: envoy.zipkin
+    config:
+      collector_cluster: zipkin_cluster
+      collector_endpoint: "/api/v1/spans"
