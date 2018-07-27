@@ -2,7 +2,19 @@
 
 ## Problem Statement
 
-Collecting and analyzing traces is still not very common and is one of the last things teams look into when it comes to observability. In addition to setting up things like Jaeger or Zipkin, teams also need to instrument their codebases in order to collect traces. This can be a quite expensive process and can take weeks or even months to complete. We're building a layer-7 proxy that can sit in front of all services and automatically generate traces (and other information) even with no or very little modifications to the application code.
+While microservice architecture solves a lot of problems, it also comes with a whole set of new ones. Microservices are much harder to monitor and fix when things go wrong. Root cause identification is a major pain as is figuring out the right person/team to alert. Traditionally, teams have had ways to monitor and troubleshoot their own applications, but in a microservice architecture, the distributed nature leads to issues between microservices and makes it really hard to make sense of things. Instrumenting such systems provides a rich set a data that can be used to answer a lot of questions. We believe such data can power a daily use tool that can provide a lot of insight to teams, automate and aid root causes identification, and dramatically reduce the mean time to repair. 
+
+Collecting and analyzing traces is still not very common and is one of the last things teams look into when it comes to observability. In addition to setting up things like Jaeger or Zipkin, teams also need to instrument their codebases in order to generate and collect traces. This can be quite an expensive process and can take weeks or even months to complete. 
+
+To this end, we're building a very lightweight layer-7 proxy that can be deployed as a sidecar/companion to all services. The proxy will automatically generate traces (and other information) with no or very little modifications to the application code.
+
+
+## Why sidecars or Out of process architecture?
+
+Microservices also result in a lot of duplicated effort as teams often need to implement the same features across services, especially things like monitoring and integration with the cloud platform. This makes it very expensive to maintain such integrations especially when different services are written in different languages and maintained by different teams. There is a ton of work that every single service needs to handle on it's own. Things like metrics, logs, traces, networkig, TLS, authentication and authorization, service discovery, retries and exponential backoffs, circuit-break, etc. Most of this work implies tight integration with the underlying cloud platform, scheduling system, service discovery system, metrics system, etc. This results in coupling of application code with the platform it runs on and duplication of work across services, languages and teams. 
+
+All of this work can be extracted out of the services into separate companion processes or containers more commonly known as sidecars. Each service can delegate any or all of these tasks to it's sidecar and only focus on the business logic itself. Any of the above mentioned components can be removed, replaced or modified across an entire cluster without having to make any changes to the application code. The sidecar pattern makes it easier define ownsership boundaries, allows both dev and ops to move faster and enables many times faster and safer deployment of things like distributed tracing. 
+
 
 ## Goals
 
@@ -19,6 +31,7 @@ Collecting and analyzing traces is still not very common and is one of the last 
 * Collect logs and other metrics from the services.
 * Support for non UDP, ICMP protocols in first version. 
 * Control-plane for proxy mesh. We aren't targetting remote, dynamic configuration management through a control-plane.
+* Any other features usually found in service meshes and similar systems.
 
 
 ## Priorities
@@ -40,9 +53,7 @@ Collecting and analyzing traces is still not very common and is one of the last 
 
 * Support service meshes like Istio and LinkerD (may build a different component).
 * Support trace generation for more application protocols such as thrift, kafka, cql, etc.
-* Provide an optional control-plane
-
-* Control-plane for proxy-mesh. We aren't targetting remote, dynamic configuration management through a control-plane in the first release but will have to support it soon afterolProvwards.
+* Provide an optional control-plane if it makes sense to support remote, dynamic configuration.
 
 ## Assumptions
 
