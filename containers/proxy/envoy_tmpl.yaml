@@ -5,9 +5,10 @@ admin:
 
 static_resources:
   listeners:
-  - name: omnition_listener
+
+  - name: omnition_egress_listener
     address:
-      socket_address: { address: 0.0.0.0, port_value: 15001 }
+      socket_address: { address: 0.0.0.0, port_value: 15002 }
     transparent: true
     listener_filters:
       - name: envoy.listener.original_dst
@@ -34,7 +35,7 @@ static_resources:
                   routes:
                   - match:
                       prefix: "/"
-                    route: { cluster: http_cluster }
+                    route: { cluster: http_egress_cluster }
             http_filters:
             - name: envoy.grpc_http1_bridge
               config: {}
@@ -60,7 +61,7 @@ static_resources:
 
                   - match:
                       prefix: "/"
-                    route: { cluster: http2_cluster }
+                    route: { cluster: http2_egress_cluster }
 
             http_filters:
             - name: envoy.grpc_http1_bridge
@@ -72,22 +73,110 @@ static_resources:
       - name: envoy.tcp_proxy
         config:
           stat_prefix: ingress_tcp
-          cluster: tcp_cluster
+          cluster: tcp_egress_cluster
+
+
+
+  - name: omnition_ingress_listener
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 15001 }
+    transparent: true
+    listener_filters:
+      - name: envoy.listener.original_dst
+      - name: envoy.listener.text_protocol_inspector
+      - name: envoy.listener.tls_inspector
+
+    filter_chains:
+
+    - filter_chain_match: {application_protocols: "http/1.1"}
+      filters:
+        - name: envoy.http_connection_manager
+          config:
+            stat_prefix: omnition
+            codec_type: AUTO
+            generate_request_id: true
+            use_remote_address: true
+            tracing:
+              operation_name: ingress
+            route_config:
+                name: http_route
+                virtual_hosts:
+                - name: http_vhost
+                  domains: ["*"]
+                  routes:
+                  - match:
+                      prefix: "/"
+                    route: { cluster: http_ingress_cluster }
+            http_filters:
+            - name: envoy.grpc_http1_bridge
+              config: {}
+            - name: envoy.router
+              config: {}
+
+    - filter_chain_match: {application_protocols: "http/2"}
+      filters:
+        - name: envoy.http_connection_manager
+          config:
+            stat_prefix: omnition
+            codec_type: AUTO
+            generate_request_id: true
+            use_remote_address: true
+            tracing:
+              operation_name: egress
+            route_config:
+                name: http2_route
+                virtual_hosts:
+                - name: http2_vhost
+                  domains: ["*"]
+                  routes:
+
+                  - match:
+                      prefix: "/"
+                    route: { cluster: http2_ingress_cluster }
+
+            http_filters:
+            - name: envoy.grpc_http1_bridge
+              config: {}
+            - name: envoy.router
+              config: {}
+
+    - filters:
+      - name: envoy.tcp_proxy
+        config:
+          stat_prefix: ingress_tcp
+          cluster: tcp_ingress_cluster
 
   clusters:
-  - name: http_cluster
+  - name: http_egress_cluster
     connect_timeout: 0.25s
     type: ORIGINAL_DST
     lb_policy: ORIGINAL_DST_LB
 
-  - name: http2_cluster
+  - name: http2_egress_cluster
     connect_timeout: 0.25s
     type: ORIGINAL_DST
     lb_policy: ORIGINAL_DST_LB
     features: "http2"
     http2_protocol_options: {}
 
-  - name: tcp_cluster
+  - name: tcp_egress_cluster
+    connect_timeout: 0.25s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+
+  - name: http_ingress_cluster
+    connect_timeout: 0.25s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+
+  - name: http2_ingress_cluster
+    connect_timeout: 0.25s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+    features: "http2"
+    http2_protocol_options: {}
+
+  - name: tcp_ingress_cluster
     connect_timeout: 0.25s
     type: ORIGINAL_DST
     lb_policy: ORIGINAL_DST_LB

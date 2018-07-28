@@ -27,13 +27,16 @@ iptables -t nat -X OMNITION_REDIRECT 2>/dev/null || true
 
 echo "Add new iptables rules"
 # new chain to envoy port
-iptables -t nat -N OMNITION_REDIRECT
-iptables -t nat -A OMNITION_REDIRECT -p tcp -j REDIRECT --to-port 15001
+iptables -t nat -N OMNITION_REDIRECT_INGRESS
+iptables -t nat -A OMNITION_REDIRECT_INGRESS -p tcp -j REDIRECT --to-port 15001
+
+iptables -t nat -N OMNITION_REDIRECT_EGRESS
+iptables -t nat -A OMNITION_REDIRECT_EGRESS -p tcp -j REDIRECT --to-port 15002
 
 # Inbound traffic
 iptables -t nat -N OMNITION_INBOUND
 iptables -t nat -A PREROUTING -p tcp -j OMNITION_INBOUND
-iptables -t nat -A OMNITION_INBOUND -p tcp -j OMNITION_REDIRECT
+iptables -t nat -A OMNITION_INBOUND -p tcp -j OMNITION_REDIRECT_INGRESS
 
 # Outbound traffic
 iptables -t nat -N OMNITION_OUTPUT
@@ -44,7 +47,7 @@ iptables -t nat -A OUTPUT -p tcp -j OMNITION_OUTPUT
 iptables -t nat -A OMNITION_OUTPUT -m owner --gid-owner omnition-proxy -j RETURN
 
 # redirect remaining outbound packets
-iptables -t nat -A OMNITION_OUTPUT -j OMNITION_REDIRECT
+iptables -t nat -A OMNITION_OUTPUT -j OMNITION_REDIRECT_EGRESS
 
 
 echo "Omnition init complete"
