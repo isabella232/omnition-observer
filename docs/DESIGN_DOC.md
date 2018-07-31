@@ -2,11 +2,12 @@
 
 ## Problem Statement
 
-While microservice architecture solves a lot of problems, it also comes with a whole set of new ones. Microservices are much harder to monitor and fix when things go wrong. Root cause identification is a major pain as is figuring out the right person/team to alert. Traditionally, teams have had ways to monitor and troubleshoot their own applications, but in a microservice architecture, the distributed nature leads to issues between microservices and makes it really hard to make sense of things. Instrumenting such systems provides a rich set a data that can be used to answer a lot of questions. We believe such data can power a daily use tool that can provide a lot of insight to teams, automate and aid root causes identification, and dramatically reduce the mean time to repair. 
 
-Collecting and analyzing traces is still not very common and is one of the last things teams look into when it comes to observability. In addition to setting up things like Jaeger or Zipkin, teams also need to instrument their codebases in order to generate and collect traces. This can be quite an expensive process and can take weeks or even months to complete. 
+Traditionally, teams have had ways to monitor and troubleshoot their own applications, but in a microservice architecture, the distributed nature leads to issues between microservices and makes it really hard to make sense of things. Introducing distributed tracing to such systems provides a rich set a data that can be used to answer a lot of questions.
 
-To this end, we're building a very lightweight layer-7 proxy that can be deployed as a sidecar/companion to all services. The proxy will automatically generate traces (and other information) with no or very little modifications to the application code.
+Distributed tracing becomes a critical component of observability and monitoring in such an environment. However, setting up distributed tracing can be a daunting task and can take a long time. Teams need to instrument their application code which can easily take months to complete. Teams need to support same features across their services, support multiple technologies, keep different implementations consistent and keep different services compatible with each other. All services need to be consistent, use the same SDK versions and compatible formats. In addition to this, tracing instrumentation may degrade application performance considerably and become too coupled with service code and lifecycles.
+
+To this end, we're building a very lightweight layer-7 proxy that can be deployed as a sidecar/companion to all services. The proxy will automatically generate traces (and other information) with no or very little modifications to the application code. The L7 proxy that can be deployed in front of every service. The proxy will transparently route traffic to and from the services while automatically generating machine-consumable traces. The proxy can reduce the time it takes to deploy distributed tracing from months or weeks to hours or minutes, as it required very little or no changes to the service code. This reduces the bar to generate individual spans and provides features like complete end-to-end topology out of the box. It even reduces the effort required to get complete end-to-end traces by requiring services to only propagate tracing headers in requests or by using an already instrumented framework like Java Spring. In addition to this, our L7 proxy helps keep services de-coupled from tracing and helps alleviate any compatiblity or performance issues with the services as services don't need to understand tracing formats or details. Our L7 proxy is based upon highly efficient C++ battle-hardened envoy proxy, and will have tunable resource consumption.
 
 
 ## Why sidecars or Out of process architecture?
@@ -94,9 +95,12 @@ Users might be using CNI plugins in kubernetes such as Calico. This should not b
 
 # Design
 
+
 ## Proposal
 
-Our L7 Inspector will use iptables to capture all incoming and outgoing traffic and re-route it to the locally running Envoy instance. Envoy will be configured to transparently forward the traffic to the original destination and collect traces.
+Our L7 Inspector will use iptables to capture all incoming and outgoing traffic and re-route it to the locally running Envoy instance deployed as a sidecar/proxy. Envoy will be configured to transparently forward the traffic to the original destination and collect traces.
+
+## Diagrams
 
 ### Capture traffic with Iptables
 
@@ -136,6 +140,16 @@ In the first version, we'll ship a bash script that'll automate installation and
 #### Containers on VM
 
 This will be similar to the VMs use-case but the envoy proxy program will ship as a docker container instead of native program.
+
+#### Upgrades
+
+##### Kubernetes
+
+The same CLI tool used to inject sidecars into pods by automatically editing deployment files can be used to upgrade sidecars as well. The CLI tool will support automatic config re-writes and will guide the user with helpful messages if a backward incompatible config upgrade is detected that cannot be automatially handled.
+
+#### Containers on VM
+
+Users can simply bump docker image version number and re-deploy the proxy in order to upgrade. Proxy should detect if it was provided an old but incompatible config and should guide the user to update the config as required.
 
 ### Configuration
 
@@ -201,9 +215,6 @@ Since we configure Envoy to have different routing rules for different protocols
 * Upgrading to newer version of Envoy will not be as straightforward as we'll need to update filter API usage if needed and rebuild Enovy.
 * Will need to invest time and build expertise in C++ and low level networking as such filters can become performance bottlenecks if not built well. This can be consider a pro in the long run.
 
-
-## Diagrams
-
 ## Alternatives
 
 ### eBPF vs Ipables
@@ -231,11 +242,46 @@ Winner: Tie but tipping in favour of mitmproxy.
 
 mitmproxy shines when it comes to intercepting TLS traffic. mitm even stands for "man in the middle" so we could say intercepting traffic is the main usecase of mitm.
 
-Winnder: mitmproxy
+Winner: mitmproxy
 
 
 # Operations
 
 ## Telemetry
 
-We'll add monitoring for each running Envoy proxy and report health information to Omnition backend. We'll also expose a statsd  and probably prometheus compatible stats endpoint for local monitoring support.
+All running proxy instances will expose statsD and/or prometheus compatible metrics endpoints so they can be monitored locally. We'll likely also support sending health information to remote endpoints.
+
+
+# Work Items
+
+## Build PoC L7 Proxy
+  * Working trasparent proxy
+  * Export traces in Zipkin format
+  * Export traces in Jaeger native format
+  * Correctly mark upstream and downstream services in generated traces
+  * Add support for HTTP/2
+  * Add support for gRPC
+  * Add support for silent pass-through for other protocols
+  * Improve Iptables rules to
+    - Only capture traffic between services by default (allow overriding)
+    - Only capture traffic going in and out of the service being proxied and ignore other process in same local network
+    - Add different iptables filters for incoming and outgoing traffic to make it easy to mark servers/clients in Envoy
+    - Add cleanup script that remove iptables rules when proxy dies/exits
+    - Build bash script to act as a CLI for non-k8s environment that can be used to inject/remove routing rules. Essentially an easy to use abstraction on top of iptables.
+  * Expose prometheus comptabible metrics endpoint from proxies
+  * Add ability to customize behavior using environment variables (expose more knobs)
+  * Add support for SSL
+  * Improve automatic protocol detection Envoy extension
+    - Improve logic to detect protocol from raw streams
+    - Add unit tests
+  * Upstream protocol detection extention to Envoy
+  * Build CLI tool to inject/upgrade sidecars in K8S
+  * Add support for running outside K8S
+  * Benchmark and understand resource footprint of proxy
+  * Build bash script to automate installation in non-containerized environments
+    - Build DEB packages and publish an APT repo
+    - Add support for popular Linux init system 
+  * Migrate to CircleCI/TravisCI
+  * Add documentation for users
+  * Open source L7 proxy
+  * Ship through Docker Hub
