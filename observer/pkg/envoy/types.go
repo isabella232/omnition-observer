@@ -35,19 +35,26 @@ type VirtualHostRouteMatch struct {
 	Prefix string
 }
 
-type VirtualHostRouteRule struct {
+type VirtualHostRouteCluster struct {
 	Cluster string
 }
 
+type VirtualHostRouteRedirect struct {
+	PathRedirect  string `yaml:"path_redirect"`
+	HTTPSRedirect bool   `yaml:"https_redirect"`
+}
+
 type VirtualHostRoute struct {
-	Match VirtualHostRouteMatch
-	Route VirtualHostRouteRule
+	Match    VirtualHostRouteMatch
+	Route    VirtualHostRouteCluster  `yaml:",omitempty"`
+	Redirect VirtualHostRouteRedirect `yaml:",omitempty"`
 }
 
 type VirtualHost struct {
-	Name    string
-	Domains []string
-	Routes  []VirtualHostRoute
+	Name       string
+	RequireTLS bool `yaml:"required_tls,omitempty"`
+	Domains    []string
+	Routes     []VirtualHostRoute
 }
 
 type RouteConfig struct {
@@ -91,7 +98,7 @@ type TLSCertificate struct {
 }
 
 type CommonTLSContext struct {
-	TLSCertificates []TLSCertificate `yaml:"tls_certificate"`
+	TLSCertificates []TLSCertificate `yaml:"tls_certificates"`
 }
 
 type TLSContext struct {
@@ -120,6 +127,18 @@ type HTTP2ProtocolOptions struct {
 	MaxConcurrentStreams int `yaml:"max_concurrent_streams"`
 }
 
+type TLSValidationContext struct {
+	TrustedCA DataSource `yaml:"trusted_ca"`
+}
+
+type UpstreamCommonTLSContext struct {
+	ValidationContext TLSValidationContext `yaml:"validation_context"`
+}
+
+type UpstreamTLSContext struct {
+	CommonTLSContext UpstreamCommonTLSContext `yaml:"common_tls_context"`
+}
+
 type Cluster struct {
 	Name                 string
 	ConnectTimeout       string `yaml:"connect_timeout"`
@@ -128,6 +147,7 @@ type Cluster struct {
 	Features             string               `yaml:",omitempty"`
 	HTTP2ProtocolOptions HTTP2ProtocolOptions `yaml:"http2_protocol_options,omitempty"`
 	Hosts                []ClusterHost
+	TLSContext           UpstreamTLSContext `yaml:"tls_context,omitempty"`
 }
 
 type ClusterHost struct {

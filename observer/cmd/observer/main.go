@@ -14,13 +14,12 @@ import (
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
+	log.SetOutput(os.Stderr)
 
 	viper.SetEnvPrefix("OBS")
 
 	viper.SetDefault("tls_enabled", false)
 	viper.BindEnv("tls_enabled")
-
 	viper.BindEnv("tls_ca_cert")
 	viper.BindEnv("tls_cert")
 	viper.BindEnv("tls_key")

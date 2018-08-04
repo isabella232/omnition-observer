@@ -1,0 +1,462 @@
+admin:
+  access_log_path: /dev/null
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901
+static_resources:
+  listeners:
+  - name: omnition_ingress_listener
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 15001
+    transparent: true
+    listener_filters:
+    - name: envoy.listener.original_dst
+    - name: envoy.listener.text_protocol_inspector
+    - name: envoy.listener.tls_inspector
+
+    filter_chains:
+    - filter_chain_match:
+        application_protocols: http/1.1
+        transport_protocol: tls
+      filters:
+      - name: envoy.http_connection_manager
+        config:
+          stat_prefix: omnition
+          codec_type: AUTO
+          generate_request_id: true
+          use_remote_address: true
+          tracing:
+            operation_name: ingress
+          route_config:
+            name: http1_route
+            virtual_hosts:
+            - name: http1_vhost
+              required_tls: true
+              domains:
+              - '*'
+              routes:
+              - match:
+                  prefix: /
+                route:
+                  cluster: http1_ingress_cluster
+          http_filters:
+          - name: envoy.grpc_http1_bridge
+            config: {}
+          - name: envoy.router
+            config: {}
+      tls_context:
+        common_tls_context:
+          tls_certificates:
+          - certificate_chain:
+              inline_string: |-
+                -----BEGIN CERTIFICATE-----
+                MIIEaTCCAtGgAwIBAgIRAOE9B139zjlv5U7Ag2zLL+owDQYJKoZIhvcNAQELBQAw
+                TzEeMBwGA1UEChMVbWtjZXJ0IGRldmVsb3BtZW50IENBMRIwEAYDVQQLDAlvd2Fp
+                c0BYUFMxGTAXBgNVBAMMEG1rY2VydCBvd2Fpc0BYUFMwHhcNMTgwODA0MjIyNjI0
+                WhcNMjgwODA0MjIyNjI0WjA9MScwJQYDVQQKEx5ta2NlcnQgZGV2ZWxvcG1lbnQg
+                Y2VydGlmaWNhdGUxEjAQBgNVBAsMCW93YWlzQFhQUzCCASIwDQYJKoZIhvcNAQEB
+                BQADggEPADCCAQoCggEBALOyZXwNkf71CqGZjIOGrP4G/rWmm52jiV0aszxxeKz2
+                2OcH+yzAzvOPVuQycPIMAjzq+2MvX/TOcMP1X5zfzm88OtHN3n92D+Y+0xauJub8
+                1VYXoXYP4cFvAkuIyUn/tek9apOUfNZl70G8xMlzHqxVs952wRPo/kqzpIjOjm5H
+                icihKUEhzomOuprwNZKT2BFteBbw/OliiF5cyofkUMxLuVhTSaHuPYzfNp1J1YJH
+                34beHez6yaCP3olO3CX1bxS/JDp0EoO5IWb/qHCzOVGCJsGLN7SiI8pemsUGqJxj
+                aaOWMfnN2Ys/qepVffLG6QAoZlM7JtnwRezIRMVBam8CAwEAAaOB0TCBzjAOBgNV
+                HQ8BAf8EBAMCBaAwEwYDVR0lBAwwCgYIKwYBBQUHAwEwDAYDVR0TAQH/BAIwADAf
+                BgNVHSMEGDAWgBSRuO6Jxl3dCnnh1rfqL3dEcopa3DB4BgNVHREEcTBvgh5zcnYx
+                LmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWyCHnNydjIuZGVmYXVsdC5zdmMuY2x1
+                c3Rlci5sb2NhbIIEc3J2MYIEc3J2MoIbKi5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxv
+                Y2FshwTAqGNkMA0GCSqGSIb3DQEBCwUAA4IBgQAa0l5GPq6QVlL95LuArnrDsK7p
+                Zz5xhE6qzDpb/GoDmka74eq8CHRSqgk+FD7jz1On2X1F8VRKGYTVIK7M/vuJwbnJ
+                9HJdzR/9qKCbaMGcKcosw7SOxSXn7QyYritSgM0KoKMfOjlz8sz3ixemXnoLnVG9
+                t33u5UgLUSc6tLwXHjxthDkZF6i/hnZXKctdie4QRMpxmGMDt7Der3eub6psd8Q4
+                Lf3b7DUrZzL/34UjcYXODDWBQnjw5nmakjUR1RUGhq39rSgigExkr014/DqjeRHY
+                THEIG5Od6WpTZuu9IuyNkvgNWSRNJ46G5aOxCL+hIvWhYvGOw7+T6zpf4LsGJB1b
+                /d951GD6izNtS2acIFQ7mkBirxsGLyY0kP7LYHu5Oi3bPpFG3beqa4lZmzeSa+65
+                NpvBO8BiAPvkD9Vno01oFgce5/vO/qpF4fFTU7qSXWht03Ag5y16ADDaGiKGroVm
+                fMnlLb6KOWiJfx7H2f/JLRQ9yV4abo9l4/xGDps=
+                -----END CERTIFICATE-----
+            private_key:
+              inline_string: |-
+                -----BEGIN PRIVATE KEY-----
+                MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCzsmV8DZH+9Qqh
+                mYyDhqz+Bv61ppudo4ldGrM8cXis9tjnB/sswM7zj1bkMnDyDAI86vtjL1/0znDD
+                9V+c385vPDrRzd5/dg/mPtMWribm/NVWF6F2D+HBbwJLiMlJ/7XpPWqTlHzWZe9B
+                vMTJcx6sVbPedsET6P5Ks6SIzo5uR4nIoSlBIc6Jjrqa8DWSk9gRbXgW8PzpYohe
+                XMqH5FDMS7lYU0mh7j2M3zadSdWCR9+G3h3s+smgj96JTtwl9W8UvyQ6dBKDuSFm
+                /6hwszlRgibBize0oiPKXprFBqicY2mjljH5zdmLP6nqVX3yxukAKGZTOybZ8EXs
+                yETFQWpvAgMBAAECggEASPkrSUNhhH4SQSnP7CGm4soIadAs5clhoROUsfkKnoLn
+                9npBQB1UbYhKKwVo5IKH7iEm0VKNzyZ+mLVujJA+juGQqV7G+lABiOj+Y/l5Btip
+                8fpKsV0lup3P+sijpY9YWk18mE32nEJs9O8pov1C+Y0cLD1hjypRChkFuiDXqmRo
+                jmp1pUTxeAX6ayYwFLVzKRzaWTVvMoHPJgpVowBZucF/+9kJcBABu7JtaukQXGf7
+                kbZxcQ77gxg8kO0UHUWHliikNvDwc4v+PEkUAiHPZN3le92bL7KoHdKD/JWeOwNk
+                Q+tclRz1HwIsf5zAw8sBizEXF1e9TJTnN483R0TRcQKBgQDajCqPSimJj42c/BNw
+                Ek9kqSmoHXo0ju0Ax3fFu3+lGnP1uCw8SqX13nhoLWzLDVff8Tr18T1wJ0o7R6ib
+                dgiK8t2EmUwfKL9icNZgwsr5WOzPz+qTSGolrAKrPZcT2O+Y3XzqRxvLe4BeiAVP
+                miuBvilu9fSErEuWlgTV7jOvEwKBgQDSfdMAPIxHi5B5FhzmLYKSUTykTbp/GHt6
+                PV2uu+gKOqvACMwj5YOhlVBOc/TdT3B4Tk1/Xfvn7iochYZE5Z89A89mzfNDehku
+                0+yZvKodn+wZf/9XPyBZ1zrs0zzEBnFXPBuzAMSKVtuPUMGQ74MXyKL3qwI3juid
+                wD29dgkWtQKBgQCnr7aUHTZDyzbARhXv/syWEsnYqU1z+FpXJ7V5rUTifKqO1hJy
+                7F/siBdg78GzBvju5hv0S3Z1kF//nhr7tZQWcQSQ0kK7AbvfH28N7UhqC9YgGYsG
+                GSEA6LtfgrFh1Cj65K8M3ySve4JihgF1M3jAYxVNg0Brb/vLfi4Vq2BSqwKBgQCP
+                ZaakZ5tNdlfjFdx0NxbX5T4B1O4zfZNJMJss2dh3d4bgGV4xKj+lidoeyEJNrru5
+                Sebj2TwuwgKwUYqqTyBPadQWfkG2e2zCiR+LkIr4CaXHrXpfjqLUcZs0Eag5BwaZ
+                3lokdWZvtEJ5fRORUIonXskfHsIw5Uu1hGzLMKl6bQKBgG3YnWHWEstJ0Knnvgjt
+                qk87dW05MWa1rRHAtC5wjJEHF5FSNh3zPtDipJWBFJgotjlxfkiRvQbFZNCremIq
+                djrmHR3qt7jJztIs864FXOBkX6KMn9tOs0QDfm+4ZEgVynvJmkwNbHREX1Tr1mkD
+                GDvsBuR0WVzZTQqIBMSPAY76
+                -----END PRIVATE KEY-----
+    - filter_chain_match:
+        application_protocols: http/2
+        transport_protocol: tls
+      filters:
+      - name: envoy.http_connection_manager
+        config:
+          stat_prefix: omnition
+          codec_type: AUTO
+          generate_request_id: true
+          use_remote_address: true
+          tracing:
+            operation_name: ingress
+          route_config:
+            name: http2_route
+            virtual_hosts:
+            - name: http2_vhost
+              required_tls: true
+              domains:
+              - '*'
+              routes:
+              - match:
+                  prefix: /
+                route:
+                  cluster: http2_ingress_cluster
+          http_filters:
+          - name: envoy.grpc_http1_bridge
+            config: {}
+          - name: envoy.router
+            config: {}
+      tls_context:
+        common_tls_context:
+          tls_certificates:
+          - certificate_chain:
+              inline_string: |-
+                -----BEGIN CERTIFICATE-----
+                MIIEYjCCAsqgAwIBAgIQNWbg5y9tPqDD6/nhXVeN0DANBgkqhkiG9w0BAQsFADBP
+                MR4wHAYDVQQKExVta2NlcnQgZGV2ZWxvcG1lbnQgQ0ExEjAQBgNVBAsMCW93YWlz
+                QFhQUzEZMBcGA1UEAwwQbWtjZXJ0IG93YWlzQFhQUzAeFw0xODA4MDQwMTM0MTha
+                Fw0yODA4MDQwMTM0MThaMD0xJzAlBgNVBAoTHm1rY2VydCBkZXZlbG9wbWVudCBj
+                ZXJ0aWZpY2F0ZTESMBAGA1UECwwJb3dhaXNAWFBTMIIBIjANBgkqhkiG9w0BAQEF
+                AAOCAQ8AMIIBCgKCAQEA8GH7RUn+iNmoXTFi59mU6if1NBbu3sGZcJjoJDyODesx
+                Euq/G+TK9m28oeA+t/Pkc17iYd+dgJYnc8coaobqHnRmzOtpdJGIpw3Av2TBvOHT
+                xA8l/qyQTvpvezGK0tYDE3sIMeW1WZfmw3Ddugta8Xww5CpUKcP8H1+MTch+2I1A
+                EpLFThT3UWlKLpH/Mk8HlHhDTlQQi/8bz8e9bV7VY0HETWbHk4hr6GPgrZshuuzA
+                l3gjztVlV9KZXG3W4+HxTcsncTVBWlujInVmA2Ys/1oeHaKfPk2H+Cjcaff4sCF4
+                bHKbVK0amzm04vQREdsm5cE7huQh9W4Cf+Afhh4r4wIDAQABo4HLMIHIMA4GA1Ud
+                DwEB/wQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDATAMBgNVHRMBAf8EAjAAMB8G
+                A1UdIwQYMBaAFJG47onGXd0KeeHWt+ovd0RyilrcMHIGA1UdEQRrMGmCHnNydjEu
+                ZGVmYXVsdC5zdmMuY2x1c3Rlci5sb2NhbIIec3J2Mi5kZWZhdWx0LnN2Yy5jbHVz
+                dGVyLmxvY2FsggRzcnYxggRzcnYyghsqLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9j
+                YWwwDQYJKoZIhvcNAQELBQADggGBAIqcCSDivxGnM/gsHFvsCQwllgMSzongAxBF
+                py7LI6vXr/DdxOHHDHqRTWUWCH3BEFWOlAG0haSAKezam+WOAMvYdOg/S3vF4Hq9
+                HIAKuwv9ae+okfIc2UGjKmj9r60VQGlqwPJJTXUNps+AKnwnZbbUcTyf50wYmLeA
+                1fDyaPvgFZ13hD4kd1Dty42UZZ1QeWEDEe2toSoK/FQjL+i5+9ZHCkurAzrAUH/e
+                MNl83kcaM1Alg3ulHFi/vVQ/WwtxDj2hru7c6hQV3dECSAZjznxEi85XC1xDr94K
+                GLrh6EEKbh+ZsyoiGF+pcUMvwahJCoryFRl3Q+pe8AVaDTiyW/LhQd1oAacjdPdN
+                nm6AM6D3DL5cy0prenqLO9GYuZtc/UVc8w7DeepU5skIgg7N0VmkPhN9ReFiB1+c
+                P93g6dPbYExNXOUHziHzP80fv0AyX8ASKrIw6jxrcqzBmPGzdE7KV6K/fVRPkr/L
+                HHWqs+bzYBhCrvu3SIja5y53WDo6uA==
+                -----END CERTIFICATE-----
+            private_key:
+              inline_string: |-
+                -----BEGIN PRIVATE KEY-----
+                MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDwYftFSf6I2ahd
+                MWLn2ZTqJ/U0Fu7ewZlwmOgkPI4N6zES6r8b5Mr2bbyh4D638+RzXuJh352Alidz
+                xyhqhuoedGbM62l0kYinDcC/ZMG84dPEDyX+rJBO+m97MYrS1gMTewgx5bVZl+bD
+                cN26C1rxfDDkKlQpw/wfX4xNyH7YjUASksVOFPdRaUoukf8yTweUeENOVBCL/xvP
+                x71tXtVjQcRNZseTiGvoY+CtmyG67MCXeCPO1WVX0plcbdbj4fFNyydxNUFaW6Mi
+                dWYDZiz/Wh4dop8+TYf4KNxp9/iwIXhscptUrRqbObTi9BER2yblwTuG5CH1bgJ/
+                4B+GHivjAgMBAAECggEAdJhR9G3LlD1euLU3sBWNcXYoLTfibRGih0bjcpAcpwup
+                Je/O+oyjFZxsnmfShA88g+lGDQsVrkUmpbW4GNOPw23aXxLgd7YPflfhYfRRNHik
+                6rgeScURyf0XDb4eA93iaBSJCQrOR8KyH6IjKhZP6km+vSz63bc+F0mVGDVjsU0B
+                SOQDjYjeeXYhfooZYkK9hl1JXa+BsN/e+kfdGMfI3agxpQu5+KhzRprrP7Ve9U0f
+                YibuOOuxVLLGGx85fq6i0SJfHy0x4HCnPdvTK/Qxb9K1xxmsK42LAoS1oa/benTz
+                gIc5tCilIW3s3DvNQlLInKhNpI1vlTX9fIRZHlxDwQKBgQD+ckoxXQnf9/IdAtbn
+                3AaxeoFcqFYEJppo2k6MUlmqP9CZiY9OawyHAR+BWQSaMxBecGdm0XpAXVKqqFac
+                UnmKLBOWKAtoLTdPk3U81Vwx7VILxAaLiqJbkHIYcz9jj4JMDRChJMpyzSQ+9qcu
+                USYxkajhZO8ys2RPCbICrsgiywKBgQDx2bWmITLwarof1D4STxDVl90yY/KmX4SX
+                bmlxyO7tkScEdAm77vao9jqISOO5Nuhs+24GeDwa1AD9LyrfvjczblfcAimdR0dg
+                jXY/NzFVlwoe1ZJB+44g54n81VYABm3GPoDJnTsipngMJiZ5sA1cSX1SlnrousLX
+                jXzkvFzASQKBgBWfHqDdOBaZGjDO6fYf4023jECUaWLG6P4Z9uzDnqzx6UbywoO2
+                YwUh2kyChPqZdj2gLZk2Gb5Yb8rirSFxfLR6FFwBIR8EIJwZeq/lrYTslrk7Ohcn
+                e65uMtPTD0LlkfvmbFBVMQLaXccf7IrqCGXT69bjXdQgHFj/COpjccxLAoGAOJvo
+                9NXYgoW4wzJ+xPJU0moVkHHsnhzFgFyLueJ6aokLRPOUQ7UPb0UTNks5YmUDyl6f
+                xkvmZbEx+hFMS8rOSO+PCSRIcVP51RPHlcxpc8tCxyzeaytifTk1B0U4OBFJKJoA
+                szBmYxnsB4v2fY1D01IwT2CBrG/qo2Gu1itw2mECgYBzaDeGJT+mHF/INzab7KGz
+                ZogIp/w+3TD6wKj00aPe80I99QIjSrwBz7IYVzwa6urCgOS7PN8BJe+923mQImk4
+                rhTEpj4+y93urlIIu0HPrkl/VzHkm6/3sEDLerutgtkIktP7rkXJm/kdWpqxJM0s
+                RutHq8vi1zWOgqArHndMcQ==
+                -----END PRIVATE KEY-----
+
+
+    - filter_chain_match:
+        application_protocols: http/1.1
+      filters:
+      - name: envoy.http_connection_manager
+        config:
+          stat_prefix: omnition
+          codec_type: AUTO
+          generate_request_id: true
+          use_remote_address: true
+          tracing:
+            operation_name: ingress
+          route_config:
+            name: tcp_http2_route
+            virtual_hosts:
+            - name: tcp_http2_vhost
+              domains:
+              - '*'
+              require_ssl: true
+              routes:
+              - match:
+                  prefix: /
+                redirect:
+                  path_redirect: /
+                  https_redirect: true
+          http_filters:
+          - name: envoy.grpc_http1_bridge
+            config: {}
+          - name: envoy.router
+            config: {}
+
+
+
+    - filters:
+      - name: envoy.tcp_proxy
+        config:
+          stat_prefix: ingress_tcp
+          cluster: tcp_ingress_cluster
+
+
+
+
+  - name: omnition_egress_listener
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 15002
+    transparent: true
+    listener_filters:
+    - name: envoy.listener.original_dst
+    - name: envoy.listener.text_protocol_inspector
+    - name: envoy.listener.tls_inspector
+
+    filter_chains:
+    - filter_chain_match:
+        application_protocols: http/1.1
+      filters:
+      - name: envoy.http_connection_manager
+        config:
+          stat_prefix: omnition
+          codec_type: AUTO
+          generate_request_id: true
+          use_remote_address: true
+          tracing:
+            operation_name: egress
+          route_config:
+            name: e_http1_route
+            virtual_hosts:
+            - name: e_http1_vhost
+              domains:
+              - '*'
+              routes:
+              - match:
+                  prefix: /
+                route:
+                  cluster: http1_egress_cluster
+          http_filters:
+          - name: envoy.grpc_http1_bridge
+            config: {}
+          - name: envoy.router
+            config: {}
+
+    - filter_chain_match:
+        application_protocols: http/2
+      filters:
+      - name: envoy.http_connection_manager
+        config:
+          stat_prefix: omnition
+          codec_type: AUTO
+          generate_request_id: true
+          use_remote_address: true
+          tracing:
+            operation_name: egress
+          route_config:
+            name: http2_route
+            virtual_hosts:
+            - name: http2_vhost
+              required_tls: true
+              domains:
+              - '*'
+              routes:
+              - match:
+                  prefix: /
+                route:
+                  cluster: http2_egress_cluster
+          http_filters:
+          - name: envoy.grpc_http1_bridge
+            config: {}
+          - name: envoy.router
+            config: {}
+
+    - filters:
+      - name: envoy.tcp_proxy
+        config:
+          stat_prefix: egress_tcp
+          cluster: tcp_egress_cluster
+
+  clusters:
+  - name: http1_ingress_cluster
+    connect_timeout: 0.5s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+
+  - name: http1_egress_cluster
+    connect_timeout: 1s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+    tls_context:
+      common_tls_context:
+        validation_context:
+          trusted_ca:
+            inline_string: |-
+              -----BEGIN CERTIFICATE-----
+              MIIEbjCCAtagAwIBAgIRAJHa93ssnYORz70N2t7ahrAwDQYJKoZIhvcNAQELBQAw
+              TzEeMBwGA1UEChMVbWtjZXJ0IGRldmVsb3BtZW50IENBMRIwEAYDVQQLDAlvd2Fp
+              c0BYUFMxGTAXBgNVBAMMEG1rY2VydCBvd2Fpc0BYUFMwHhcNMTgwODAyMTA0ODM1
+              WhcNMjgwODAyMTA0ODM1WjBPMR4wHAYDVQQKExVta2NlcnQgZGV2ZWxvcG1lbnQg
+              Q0ExEjAQBgNVBAsMCW93YWlzQFhQUzEZMBcGA1UEAwwQbWtjZXJ0IG93YWlzQFhQ
+              UzCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCCAYoCggGBANX1rBMCA5rOBjpALOJ5
+              sZjyeqb7o7A5nDMwxUelRQP+vJvHTXQC14CJubAWNtS6XW8jawg2DTOqcgNMI9qA
+              snhXkMzUvENnkO8lwOonf56GiECBrrRCxnIYh+ypnJyn5uA7tJ8PcCjj1RCnDFnW
+              0DD8XTvfEtWkYUBdnGQwFz7nqgbb2ip9rsVSR3tEK1dGu3m8l709jNfCy344xc1K
+              Qc/Z7rilRUqyBYde3YUAHNYnxyzCeWY28lmfRXqy6povuihcgPSzUesSezgrWNYF
+              6Qzt/n0x080ExJPJl4PQ+3OWqkPaUOAafkMk8Bi8PBA46fvSkmEmbZYEoS6zj1cg
+              JKEhVJmeglJtgLl3afVLYjg0D7LrjyFaHwLiLzOz3T6PE8iavC1FixgNP8aSDqvj
+              dosFfjI54jO57rGxaIoCBifypmW+3yXOMdYwcRdE4mas8g9Bj36LmcxX7UwxJ/lP
+              cBZMkBrc7/gK2nLv1iY50kJSWCP6ZxWRHqmsCO7emKJrUwIDAQABo0UwQzAOBgNV
+              HQ8BAf8EBAMCAgQwEgYDVR0TAQH/BAgwBgEB/wIBADAdBgNVHQ4EFgQUkbjuicZd
+              3Qp54da36i93RHKKWtwwDQYJKoZIhvcNAQELBQADggGBACCxDNqHm6n8hmyrfWkI
+              LOmoslEWA5ea5Hxu2Ygilkihwk9YQ/sGP5nNfKp5w+7yY520jzb1BhOtPr4tYs8M
+              Z1yO3tz/jlhXwgtY+NoeEZxGsGfa+VvYlxk8ePHC3XykI0embgtm++GEvJkij9RT
+              eLAOogGjoSiczOD1N5rCn7IXwgvg8ygAsSBfVG5+TfzZ0Z9bzkUrLFeYp/pmp9CM
+              wWH8pw8jeTNlsQIGiw690YWkz/Re3gyaE/zgjcXGKhYjU/sZdehAHX5+OItlDRVv
+              Km2a5kC0SpZ8Z7DX27skZrAwof90C0YXLibrfoGytoVJ3adNuz/8qTt6t5FMsGDS
+              +YPgg/4+q3vnDiwL/y/aPUCs+Dc9yiHLmQB5Rcx2WoFF9h4ldD06zZr3UiEclvML
+              Eu/VUY0bcNn9+W5O+o2b5UU0ITyIOz19Nqsqm/AMXw19vTlf57kQXEO9ZzF/ab+Y
+              7HyGfN9vlFBh+uc2F4JL/3qrqq31vyDeVpBP8BluRB94gQ==
+              -----END CERTIFICATE-----
+
+  - name: http2_ingress_cluster
+    connect_timeout: 0.5s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+    features: http2
+    http2_protocol_options:
+      max_concurrent_streams: 2147483647
+
+  - name: http2_egress_cluster
+    connect_timeout: 0.5s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+    features: http2
+    http2_protocol_options:
+      max_concurrent_streams: 2147483647
+    tls_context:
+      common_tls_context:
+        validation_context:
+          trusted_ca:
+            inline_string: |-
+              -----BEGIN CERTIFICATE-----
+              MIIEbjCCAtagAwIBAgIRAJHa93ssnYORz70N2t7ahrAwDQYJKoZIhvcNAQELBQAw
+              TzEeMBwGA1UEChMVbWtjZXJ0IGRldmVsb3BtZW50IENBMRIwEAYDVQQLDAlvd2Fp
+              c0BYUFMxGTAXBgNVBAMMEG1rY2VydCBvd2Fpc0BYUFMwHhcNMTgwODAyMTA0ODM1
+              WhcNMjgwODAyMTA0ODM1WjBPMR4wHAYDVQQKExVta2NlcnQgZGV2ZWxvcG1lbnQg
+              Q0ExEjAQBgNVBAsMCW93YWlzQFhQUzEZMBcGA1UEAwwQbWtjZXJ0IG93YWlzQFhQ
+              UzCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCCAYoCggGBANX1rBMCA5rOBjpALOJ5
+              sZjyeqb7o7A5nDMwxUelRQP+vJvHTXQC14CJubAWNtS6XW8jawg2DTOqcgNMI9qA
+              snhXkMzUvENnkO8lwOonf56GiECBrrRCxnIYh+ypnJyn5uA7tJ8PcCjj1RCnDFnW
+              0DD8XTvfEtWkYUBdnGQwFz7nqgbb2ip9rsVSR3tEK1dGu3m8l709jNfCy344xc1K
+              Qc/Z7rilRUqyBYde3YUAHNYnxyzCeWY28lmfRXqy6povuihcgPSzUesSezgrWNYF
+              6Qzt/n0x080ExJPJl4PQ+3OWqkPaUOAafkMk8Bi8PBA46fvSkmEmbZYEoS6zj1cg
+              JKEhVJmeglJtgLl3afVLYjg0D7LrjyFaHwLiLzOz3T6PE8iavC1FixgNP8aSDqvj
+              dosFfjI54jO57rGxaIoCBifypmW+3yXOMdYwcRdE4mas8g9Bj36LmcxX7UwxJ/lP
+              cBZMkBrc7/gK2nLv1iY50kJSWCP6ZxWRHqmsCO7emKJrUwIDAQABo0UwQzAOBgNV
+              HQ8BAf8EBAMCAgQwEgYDVR0TAQH/BAgwBgEB/wIBADAdBgNVHQ4EFgQUkbjuicZd
+              3Qp54da36i93RHKKWtwwDQYJKoZIhvcNAQELBQADggGBACCxDNqHm6n8hmyrfWkI
+              LOmoslEWA5ea5Hxu2Ygilkihwk9YQ/sGP5nNfKp5w+7yY520jzb1BhOtPr4tYs8M
+              Z1yO3tz/jlhXwgtY+NoeEZxGsGfa+VvYlxk8ePHC3XykI0embgtm++GEvJkij9RT
+              eLAOogGjoSiczOD1N5rCn7IXwgvg8ygAsSBfVG5+TfzZ0Z9bzkUrLFeYp/pmp9CM
+              wWH8pw8jeTNlsQIGiw690YWkz/Re3gyaE/zgjcXGKhYjU/sZdehAHX5+OItlDRVv
+              Km2a5kC0SpZ8Z7DX27skZrAwof90C0YXLibrfoGytoVJ3adNuz/8qTt6t5FMsGDS
+              +YPgg/4+q3vnDiwL/y/aPUCs+Dc9yiHLmQB5Rcx2WoFF9h4ldD06zZr3UiEclvML
+              Eu/VUY0bcNn9+W5O+o2b5UU0ITyIOz19Nqsqm/AMXw19vTlf57kQXEO9ZzF/ab+Y
+              7HyGfN9vlFBh+uc2F4JL/3qrqq31vyDeVpBP8BluRB94gQ==
+              -----END CERTIFICATE-----
+
+  - name: tcp_ingress_cluster
+    connect_timeout: 0.5s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+
+  - name: tcp_egress_cluster
+    connect_timeout: 0.5s
+    type: ORIGINAL_DST
+    lb_policy: ORIGINAL_DST_LB
+    tls_context:
+      common_tls_context:
+        validation_context:
+          trusted_ca:
+            inline_string: |-
+              -----BEGIN CERTIFICATE-----
+              MIIEbjCCAtagAwIBAgIRAJHa93ssnYORz70N2t7ahrAwDQYJKoZIhvcNAQELBQAw
+              TzEeMBwGA1UEChMVbWtjZXJ0IGRldmVsb3BtZW50IENBMRIwEAYDVQQLDAlvd2Fp
+              c0BYUFMxGTAXBgNVBAMMEG1rY2VydCBvd2Fpc0BYUFMwHhcNMTgwODAyMTA0ODM1
+              WhcNMjgwODAyMTA0ODM1WjBPMR4wHAYDVQQKExVta2NlcnQgZGV2ZWxvcG1lbnQg
+              Q0ExEjAQBgNVBAsMCW93YWlzQFhQUzEZMBcGA1UEAwwQbWtjZXJ0IG93YWlzQFhQ
+              UzCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCCAYoCggGBANX1rBMCA5rOBjpALOJ5
+              sZjyeqb7o7A5nDMwxUelRQP+vJvHTXQC14CJubAWNtS6XW8jawg2DTOqcgNMI9qA
+              snhXkMzUvENnkO8lwOonf56GiECBrrRCxnIYh+ypnJyn5uA7tJ8PcCjj1RCnDFnW
+              0DD8XTvfEtWkYUBdnGQwFz7nqgbb2ip9rsVSR3tEK1dGu3m8l709jNfCy344xc1K
+              Qc/Z7rilRUqyBYde3YUAHNYnxyzCeWY28lmfRXqy6povuihcgPSzUesSezgrWNYF
+              6Qzt/n0x080ExJPJl4PQ+3OWqkPaUOAafkMk8Bi8PBA46fvSkmEmbZYEoS6zj1cg
+              JKEhVJmeglJtgLl3afVLYjg0D7LrjyFaHwLiLzOz3T6PE8iavC1FixgNP8aSDqvj
+              dosFfjI54jO57rGxaIoCBifypmW+3yXOMdYwcRdE4mas8g9Bj36LmcxX7UwxJ/lP
+              cBZMkBrc7/gK2nLv1iY50kJSWCP6ZxWRHqmsCO7emKJrUwIDAQABo0UwQzAOBgNV
+              HQ8BAf8EBAMCAgQwEgYDVR0TAQH/BAgwBgEB/wIBADAdBgNVHQ4EFgQUkbjuicZd
+              3Qp54da36i93RHKKWtwwDQYJKoZIhvcNAQELBQADggGBACCxDNqHm6n8hmyrfWkI
+              LOmoslEWA5ea5Hxu2Ygilkihwk9YQ/sGP5nNfKp5w+7yY520jzb1BhOtPr4tYs8M
+              Z1yO3tz/jlhXwgtY+NoeEZxGsGfa+VvYlxk8ePHC3XykI0embgtm++GEvJkij9RT
+              eLAOogGjoSiczOD1N5rCn7IXwgvg8ygAsSBfVG5+TfzZ0Z9bzkUrLFeYp/pmp9CM
+              wWH8pw8jeTNlsQIGiw690YWkz/Re3gyaE/zgjcXGKhYjU/sZdehAHX5+OItlDRVv
+              Km2a5kC0SpZ8Z7DX27skZrAwof90C0YXLibrfoGytoVJ3adNuz/8qTt6t5FMsGDS
+              +YPgg/4+q3vnDiwL/y/aPUCs+Dc9yiHLmQB5Rcx2WoFF9h4ldD06zZr3UiEclvML
+              Eu/VUY0bcNn9+W5O+o2b5UU0ITyIOz19Nqsqm/AMXw19vTlf57kQXEO9ZzF/ab+Y
+              7HyGfN9vlFBh+uc2F4JL/3qrqq31vyDeVpBP8BluRB94gQ==
+              -----END CERTIFICATE-----
+
+  - name: zipkin_cluster
+    connect_timeout: 1s
+    type: strict_dns
+    lb_policy: round_robin
+    hosts:
+    - socket_address:
+        address: zipkin.opsoss.svc.cluster.local
+        port_value: 9411
+        #tracing:
+        #  http:
+        #   name: envoy.zipkin
+        # config:
+        #collector_cluster: zipkin_cluster
+        #collector_endpoint: /api/v1/spans

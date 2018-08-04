@@ -47,9 +47,10 @@ chmod o+rx /usr/local/bin/envoy
 chmod 2755 /usr/local/bin/envoy
 chgrp omnition-proxy /usr/local/bin/envoy
 
-# envsubst < /etc/envoy_tmpl.yaml > /etc/envoy.yaml
-
-observer > /etc/envoy.yaml
+echo "generating envoy config"
+# generate envoy config from ENV vars
+# observer
+# observer > /etc/envoy.yaml
 
 if [ $1 = "show-config" ];
   then

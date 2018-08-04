@@ -18,6 +18,9 @@ build-k8s-init:
 	@$(MAKE) -C containers/init build
 
 build-container-proxy:
+	@mkdir -p containers/proxy/bin
+	@cp envoy_filter/build/envoy containers/proxy/bin/
+	@cp observer/build/observer containers/proxy/bin/
 	@$(MAKE) -C containers/proxy build
 
 publish: build

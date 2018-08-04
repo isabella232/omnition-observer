@@ -138,7 +138,6 @@ static_resources:
                 - name: http2_vhost
                   domains: ["*"]
                   routes:
-
                   - match:
                       prefix: "/"
                     route: { cluster: http2_ingress_cluster }

@@ -44,14 +44,13 @@ func newFilterChain(direction int, protocol int, opts options.Options) FilterCha
 						Name: protoName + "_route",
 						VirtualHosts: []VirtualHost{
 							VirtualHost{
-								Name:    protoName + "_vhost",
-								Domains: []string{"*"},
+								Name:       protoName + "_vhost",
+								RequireTLS: true,
+								Domains:    []string{"*"},
 								Routes: []VirtualHostRoute{
 									VirtualHostRoute{
 										Match: VirtualHostRouteMatch{"/"},
-										Route: VirtualHostRouteRule{
-											Cluster: protoName + "_" + drName + "_cluster",
-										},
+										// redirect if TLS
 									},
 								},
 							},
@@ -73,6 +72,10 @@ func newFilterChain(direction int, protocol int, opts options.Options) FilterCha
 	}
 
 	if opts.TLSEnabled {
+		//chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Redirect = VirtualHostRouteRedirect{
+		//	PathRedirect:  "/",
+		//	HTTPSRedirect: true,
+		//}
 		chain.TLSContext = TLSContext{
 			CommonTLSContext{
 				[]TLSCertificate{
@@ -87,6 +90,14 @@ func newFilterChain(direction int, protocol int, opts options.Options) FilterCha
 				},
 			},
 		}
+		//} else {
+		//	chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = VirtualHostRouteCluster{
+		//		Cluster: protoName + "_" + drName + "_cluster",
+		//	}
+	}
+
+	chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = VirtualHostRouteCluster{
+		Cluster: protoName + "_" + drName + "_cluster",
 	}
 	return chain
 }
@@ -157,7 +168,7 @@ func newCluster(direction int, protocol int) Cluster {
 
 func newTracingCluster(opts options.Options) Cluster {
 	// TODO(owais): Add support for jaeger native tracing
-	return Cluster{
+	c := Cluster{
 		Name:           "zipkin_cluster",
 		ConnectTimeout: "1s",
 		Type:           "strict_dns",
@@ -171,6 +182,18 @@ func newTracingCluster(opts options.Options) Cluster {
 			},
 		},
 	}
+	if opts.TLSCACert != "" {
+		c.TLSContext = UpstreamTLSContext{
+			UpstreamCommonTLSContext{
+				TLSValidationContext{
+					DataSource{
+						InlineString: opts.TLSCACert,
+					},
+				},
+			},
+		}
+	}
+	return c
 }
 
 func New(opts options.Options) (Config, error) {
