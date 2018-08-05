@@ -3,11 +3,11 @@ containers/proxy/bin/
 envoy_filter/caches/
 envoy_filter/build/
 
+# This is for the case when we need envoy as a local repo
+envoy_filter/envoy/
+
 observer/build
 observer/caches
 
-bazel-bin
-bazel-genfiles
-bazel-out
-bazel-source
-bazel-testlogs
+bazel-*
+

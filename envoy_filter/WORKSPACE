@@ -1,13 +1,23 @@
 workspace(name = "envoy_diy_filter")
 
 ENVOY_SHA = "598f5c9433707019169669c787d606ff0b07e9d4"
-#ENVOY_SHA = "5fcc829e7800a77ea2703a1ead3f25915aae6d61"
 
 http_archive(
     name = "envoy",
     strip_prefix = "envoy-" + ENVOY_SHA,
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
+
+# To debug impl of upstream envoy, probably we want to clone and refer it locally.
+#
+# $ git clone https://github.com/envoyproxy/envoy.git
+#
+# And uncomment following rule,
+#
+# local_repository(
+#    name = "envoy",
+#    path = "envoy",
+# )
 
 load("@envoy//bazel:repositories.bzl", "envoy_dependencies")
 load("@envoy//bazel:cc_configure.bzl", "cc_configure")
