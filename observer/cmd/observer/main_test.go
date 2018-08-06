@@ -25,7 +25,7 @@ type testCase struct {
 	tlsKey         string
 	ingressPort    int
 	egressPort     int
-	tracingHandler string
+	tracingDriver  string
 	tracingAddress string
 	tracingPort    int
 }
@@ -91,7 +91,7 @@ func TestCMDWithOptions(t *testing.T) {
 			"OBS_ADMIN_PORT":      "2020",
 			"OBS_ADMIN_LOG_PATH":  "dasdkjasd",
 			"OBS_INGRESS_PORT":    "12345",
-			"OBS_TRACING_HANDLER": "gibberish",
+			"OBS_TRACING_DRIVER":  "gibberish",
 			"OBS_TRACING_ADDRESS": "my-tracing-address",
 			"OBS_TRACING_PORT":    "6543",
 			"OBS_EGRESS_PORT":     "54321",
@@ -153,7 +153,7 @@ func TestCMDWithOptions(t *testing.T) {
 				} else {
 					assert.Nil(t, c.StaticResources.Listeners[0].FilterChains[0].TLSContext)
 				}
-			case "OBS_TRACING_HANDLER":
+			case "OBS_TRACING_DRIVER":
 				// hardcoded to zipkin right now
 				assert.Equal(t, "envoy.zipkin", c.Tracing.HTTP.Name)
 

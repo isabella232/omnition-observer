@@ -23,7 +23,7 @@ type Options struct {
 	IngressPort  int
 	EgressPort   int
 
-	TracingHandler string
+	TracingDriver  string
 	TracingAddress string
 	TracingPort    int
 }
@@ -31,7 +31,7 @@ type Options struct {
 func New(
 	IngressPort int,
 	EgressPort int,
-	TracingHandler string,
+	TracingDriver string,
 	TracingAddress string,
 	TracingPort int,
 	TLSEnabled bool,
@@ -50,7 +50,7 @@ func New(
 		IngressPort: IngressPort,
 		EgressPort:  EgressPort,
 
-		TracingHandler: TracingHandler,
+		TracingDriver:  TracingDriver,
 		TracingAddress: TracingAddress,
 		TracingPort:    TracingPort,
 

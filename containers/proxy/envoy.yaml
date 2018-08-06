@@ -14,7 +14,7 @@ static_resources:
     transparent: true
     listener_filters:
     - name: envoy.listener.original_dst
-    - name: envoy.listener.text_protocol_inspector
+    #- name: envoy.listener.text_protocol_inspector
     - name: envoy.listener.tls_inspector
 
     filter_chains:
@@ -249,7 +249,7 @@ static_resources:
     transparent: true
     listener_filters:
     - name: envoy.listener.original_dst
-    - name: envoy.listener.text_protocol_inspector
+    #- name: envoy.listener.text_protocol_inspector
     - name: envoy.listener.tls_inspector
 
     filter_chains:
@@ -358,6 +358,7 @@ static_resources:
               7HyGfN9vlFBh+uc2F4JL/3qrqq31vyDeVpBP8BluRB94gQ==
               -----END CERTIFICATE-----
 
+
   - name: http2_ingress_cluster
     connect_timeout: 0.5s
     type: ORIGINAL_DST
@@ -414,37 +415,6 @@ static_resources:
     connect_timeout: 0.5s
     type: ORIGINAL_DST
     lb_policy: ORIGINAL_DST_LB
-    tls_context:
-      common_tls_context:
-        validation_context:
-          trusted_ca:
-            inline_string: |-
-              -----BEGIN CERTIFICATE-----
-              MIIEbjCCAtagAwIBAgIRAJHa93ssnYORz70N2t7ahrAwDQYJKoZIhvcNAQELBQAw
-              TzEeMBwGA1UEChMVbWtjZXJ0IGRldmVsb3BtZW50IENBMRIwEAYDVQQLDAlvd2Fp
-              c0BYUFMxGTAXBgNVBAMMEG1rY2VydCBvd2Fpc0BYUFMwHhcNMTgwODAyMTA0ODM1
-              WhcNMjgwODAyMTA0ODM1WjBPMR4wHAYDVQQKExVta2NlcnQgZGV2ZWxvcG1lbnQg
-              Q0ExEjAQBgNVBAsMCW93YWlzQFhQUzEZMBcGA1UEAwwQbWtjZXJ0IG93YWlzQFhQ
-              UzCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCCAYoCggGBANX1rBMCA5rOBjpALOJ5
-              sZjyeqb7o7A5nDMwxUelRQP+vJvHTXQC14CJubAWNtS6XW8jawg2DTOqcgNMI9qA
-              snhXkMzUvENnkO8lwOonf56GiECBrrRCxnIYh+ypnJyn5uA7tJ8PcCjj1RCnDFnW
-              0DD8XTvfEtWkYUBdnGQwFz7nqgbb2ip9rsVSR3tEK1dGu3m8l709jNfCy344xc1K
-              Qc/Z7rilRUqyBYde3YUAHNYnxyzCeWY28lmfRXqy6povuihcgPSzUesSezgrWNYF
-              6Qzt/n0x080ExJPJl4PQ+3OWqkPaUOAafkMk8Bi8PBA46fvSkmEmbZYEoS6zj1cg
-              JKEhVJmeglJtgLl3afVLYjg0D7LrjyFaHwLiLzOz3T6PE8iavC1FixgNP8aSDqvj
-              dosFfjI54jO57rGxaIoCBifypmW+3yXOMdYwcRdE4mas8g9Bj36LmcxX7UwxJ/lP
-              cBZMkBrc7/gK2nLv1iY50kJSWCP6ZxWRHqmsCO7emKJrUwIDAQABo0UwQzAOBgNV
-              HQ8BAf8EBAMCAgQwEgYDVR0TAQH/BAgwBgEB/wIBADAdBgNVHQ4EFgQUkbjuicZd
-              3Qp54da36i93RHKKWtwwDQYJKoZIhvcNAQELBQADggGBACCxDNqHm6n8hmyrfWkI
-              LOmoslEWA5ea5Hxu2Ygilkihwk9YQ/sGP5nNfKp5w+7yY520jzb1BhOtPr4tYs8M
-              Z1yO3tz/jlhXwgtY+NoeEZxGsGfa+VvYlxk8ePHC3XykI0embgtm++GEvJkij9RT
-              eLAOogGjoSiczOD1N5rCn7IXwgvg8ygAsSBfVG5+TfzZ0Z9bzkUrLFeYp/pmp9CM
-              wWH8pw8jeTNlsQIGiw690YWkz/Re3gyaE/zgjcXGKhYjU/sZdehAHX5+OItlDRVv
-              Km2a5kC0SpZ8Z7DX27skZrAwof90C0YXLibrfoGytoVJ3adNuz/8qTt6t5FMsGDS
-              +YPgg/4+q3vnDiwL/y/aPUCs+Dc9yiHLmQB5Rcx2WoFF9h4ldD06zZr3UiEclvML
-              Eu/VUY0bcNn9+W5O+o2b5UU0ITyIOz19Nqsqm/AMXw19vTlf57kQXEO9ZzF/ab+Y
-              7HyGfN9vlFBh+uc2F4JL/3qrqq31vyDeVpBP8BluRB94gQ==
-              -----END CERTIFICATE-----
 
   - name: zipkin_cluster
     connect_timeout: 1s

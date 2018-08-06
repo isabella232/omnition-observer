@@ -35,8 +35,8 @@ func init() {
 	viper.SetDefault("admin_log_path", "/dev/null")
 	viper.BindEnv("admin_log_path")
 
-	viper.SetDefault("tracing_handler", "zipkin")
-	viper.BindEnv("tracing_handler")
+	viper.SetDefault("tracing_driver", "zipkin")
+	viper.BindEnv("tracing_driver")
 
 	viper.SetDefault("tracing_address", "zipkin.opsoss.svc.cluster.local")
 	viper.BindEnv("tracing_address")
@@ -51,7 +51,7 @@ func main() {
 		viper.GetInt("ingress_port"),
 		viper.GetInt("egress_port"),
 
-		viper.GetString("tracing_handler"),
+		viper.GetString("tracing_driver"),
 		viper.GetString("tracing_address"),
 		viper.GetInt("tracing_port"),
 

@@ -4,8 +4,7 @@ set -e
 
 umask 022
 
-# TODO(owais) better aame for tracing handler
-export OBS_TRACING_HANDLER=$TRACING_HANDLER
+export OBS_TRACING_DRIVER=$TRACING_DRIVER
 export OBS_TRACING_ADDRESS=$TRACING_ADDRESS
 export OBS_TRACING_PORT=$TRACING_PORT
 

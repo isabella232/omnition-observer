@@ -15,5 +15,9 @@ RUN chmod +x /usr/local/bin/*.sh
 
 COPY envoy.yaml /etc/envoy.yaml
 
+COPY envoy.crt /usr/local/share/ca-certificates/
+RUN chmod 644 /usr/local/share/ca-certificates/envoy.crt
+RUN update-ca-certificates
+
 ENTRYPOINT ["/usr/local/bin/start_omnition_proxy.sh"]
 CMD ["run"]
