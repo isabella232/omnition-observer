@@ -4,6 +4,7 @@ admin:
     socket_address:
       address: 0.0.0.0
       port_value: 9901
+
 static_resources:
   listeners:
   - name: omnition_ingress_listener
@@ -14,8 +15,8 @@ static_resources:
     transparent: true
     listener_filters:
     - name: envoy.listener.original_dst
-    - name: envoy.listener.text_protocol_inspector
     - name: envoy.listener.tls_inspector
+    - name: envoy.listener.text_protocol_inspector
 
     filter_chains:
     - filter_chain_match:
@@ -49,6 +50,7 @@ static_resources:
             config: {}
       tls_context:
         common_tls_context:
+          alpn_protocols: http/1.1
           tls_certificates:
           - certificate_chain:
               inline_string: |-
@@ -328,6 +330,7 @@ static_resources:
     lb_policy: ORIGINAL_DST_LB
     tls_context:
       common_tls_context:
+        alpn_protocols: http/1.1
         validation_context:
           trusted_ca:
             inline_string: |-
@@ -454,9 +457,10 @@ static_resources:
     - socket_address:
         address: zipkin.opsoss.svc.cluster.local
         port_value: 9411
-        #tracing:
-        #  http:
-        #   name: envoy.zipkin
-        # config:
-        #collector_cluster: zipkin_cluster
-        #collector_endpoint: /api/v1/spans
+
+tracing:
+  http:
+    name: envoy.zipkin
+    config:
+      collector_cluster: zipkin_cluster
+      collector_endpoint: "/api/v1/spans"
