@@ -2,9 +2,6 @@ containers/proxy/bin/
 
 envoy_filter/caches/
 envoy_filter/build/
+envoy_filter/envoy/
 
-bazel-bin
-bazel-genfiles
-bazel-out
-bazel-source
-bazel-testlogs
+bazel-*
