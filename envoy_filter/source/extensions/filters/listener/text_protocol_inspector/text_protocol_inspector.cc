@@ -26,8 +26,11 @@ Config::Config(Stats::Scope&) {}
 Filter::Filter(const ConfigSharedPtr config) : config_(config) {}
 
 Network::FilterStatus Filter::onAccept(Network::ListenerFilterCallbacks& cb) {
-
   Network::ConnectionSocket& socket = cb.socket();
+  if (socket.requestedApplicationProtocols().size() > 0) {
+    // TODO(dio): Add debug level logging here.
+    return Network::FilterStatus::Continue;
+  }
   ASSERT(file_event_ == nullptr);
 
   file_event_ = cb.dispatcher().createFileEvent(
@@ -71,23 +74,15 @@ void Filter::onRead() {
     const size_t len = n - read_;
     read_ = n;
 
-    /*
-    std::cout << "==========================\n";
-    std::cout << absl::string_view(reinterpret_cast<const char*>(data), len).data();
-    std::cout << "==========================\n";
-    std::cout << std::flush;
-    */
-
     // TODO: Improve detection mechanism to avoid false positives
     std::vector<absl::string_view> protocols;
-    if (StringUtil::caseFindToken(absl::string_view(reinterpret_cast<const char*>(data), len),
-                                  " \n", "HTTP/1.1")) {
+    const auto& data_view = absl::string_view(reinterpret_cast<const char*>(data), len);
+    if (StringUtil::caseFindToken(data_view, " \n", "HTTP/1.1")) {
       protocols.emplace_back("http/1.1");
     }
 
-    if (StringUtil::caseFindToken(absl::string_view(reinterpret_cast<const char*>(data), len),
-                                  " \n", "HTTP/2.0")) {
-      protocols.emplace_back("http/2");
+    if (StringUtil::caseFindToken(data_view, " \n", "HTTP/2.0")) {
+      protocols.emplace_back("h2");
     }
 
     cb_->socket().setRequestedApplicationProtocols(protocols);
