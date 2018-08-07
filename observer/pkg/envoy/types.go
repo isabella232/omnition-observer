@@ -1,14 +1,18 @@
 package envoy
 
+type Protocol int
+
 const (
-	_ = iota
+	_ Protocol = iota
 	HTTP1
 	HTTP2
 	TCP
 )
 
+type TrafficDirection int
+
 const (
-	_ = iota
+	_ TrafficDirection = iota
 	EGRESS
 	INGRESS
 )

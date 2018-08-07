@@ -2,7 +2,7 @@ package envoy
 
 import "github.com/omnition/omnition-observer/observer/pkg/options"
 
-func newFilterChain(direction int, protocol int, opts options.Options) FilterChain {
+func newFilterChain(direction TrafficDirection, protocol Protocol, opts options.Options) FilterChain {
 	drName := "ingress"
 	if direction == EGRESS {
 		drName = "egress"
@@ -102,7 +102,7 @@ func newFilterChain(direction int, protocol int, opts options.Options) FilterCha
 	return chain
 }
 
-func newListener(direction int, opts options.Options) Listener {
+func newListener(direction TrafficDirection, opts options.Options) Listener {
 	port := opts.IngressPort
 	name := "omnition_ingress_listener"
 	if direction == EGRESS {
@@ -133,7 +133,7 @@ func newListener(direction int, opts options.Options) Listener {
 	return listener
 }
 
-func newCluster(direction int, protocol int) Cluster {
+func newCluster(direction TrafficDirection, protocol Protocol) Cluster {
 	drName := "ingress"
 	if direction == EGRESS {
 		drName = "egress"
