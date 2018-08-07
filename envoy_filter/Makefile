@@ -3,6 +3,8 @@
 DOCKER_CMD=bash
 
 CONTAINER_NAME?=envoy-build
+BUILD_IMAGE_TAG?=55606ec3f0810683e9cab31b2f9db2f2cdb43ac0
+BUILD_IMAGE?=envoyproxy/envoy-build:$(BUILD_IMAGE_TAG)
 
 IS_RUNNING = $(shell docker inspect -f {{.State.Running}} $(CONTAINER_NAME))
 
@@ -18,10 +20,10 @@ echo-mode:
 	@echo $(MODE)
 
 pull-build-image:
-	docker pull envoyproxy/envoy-build
+	docker pull $(BUILD_IMAGE)
 
 docker-run:
-	docker run -d --name="$(CONTAINER_NAME)" -v "$(CURDIR)":/source -v "$(CURDIR)/caches/home/.cache":"/root/.cache" -e HOST_USERID=`id -u` -e HOST_GROUPID=`id -g` envoyproxy/envoy-build bash
+	docker run -d --name="$(CONTAINER_NAME)" -v "$(CURDIR)":/source -v "$(CURDIR)/caches/home/.cache":"/root/.cache" -e HOST_USERID=`id -u` -e HOST_GROUPID=`id -g` $(BUILD_IMAGE) bash
 	$(MAKE) docker-exec DOCKER_CMD=$(DOCKER_CMD)
 
 docker-exec:

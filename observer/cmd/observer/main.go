@@ -39,8 +39,8 @@ func init() {
 	viper.SetDefault("tracing_driver", "zipkin")
 	viper.BindEnv("tracing_driver")
 
-	viper.SetDefault("tracing_address", "zipkin.default.svc.cluster.local")
-	viper.BindEnv("tracing_address")
+	viper.SetDefault("tracing_host", "zipkin.default.svc.cluster.local")
+	viper.BindEnv("tracing_host")
 
 	viper.SetDefault("tracing_port", 9411)
 	viper.BindEnv("tracing_port")
@@ -53,7 +53,7 @@ func main() {
 		viper.GetInt("egress_port"),
 
 		viper.GetString("tracing_driver"),
-		viper.GetString("tracing_address"),
+		viper.GetString("tracing_host"),
 		viper.GetInt("tracing_port"),
 
 		viper.GetBool("tls_enabled"),

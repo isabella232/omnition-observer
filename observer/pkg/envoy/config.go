@@ -227,7 +227,7 @@ func newTracingCluster(opts options.Options) Cluster {
 		Hosts: []ClusterHost{
 			ClusterHost{
 				SocketAddress{
-					Address:   opts.TracingAddress,
+					Address:   opts.TracingHost,
 					PortValue: opts.TracingPort,
 				},
 			},
