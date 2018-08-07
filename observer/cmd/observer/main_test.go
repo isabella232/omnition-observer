@@ -68,15 +68,24 @@ func TestCMDBasic(t *testing.T) {
 	assert.Equal(t, ingress.Address.SocketAddress.PortValue, 15001)
 	assert.Equal(t, len(ingress.FilterChains), 3)
 	assert.Equal(t, ingress.FilterChains[0].Filters[0].Config.Tracing.OperationName, "ingress")
-	assert.Equal(t, ingress.FilterChains[0].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "http1_ingress_cluster")
-	assert.Equal(t, ingress.FilterChains[1].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "http2_ingress_cluster")
+	assert.Equal(t, ingress.FilterChains[0].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_ingress")
+	assert.Equal(t, ingress.FilterChains[1].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_ingress")
 
 	assert.Equal(t, egress.Name, "omnition_egress_listener")
 	assert.Equal(t, egress.Address.SocketAddress.PortValue, 15002)
 	assert.Equal(t, len(egress.FilterChains), 3)
 	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.Tracing.OperationName, "egress")
-	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "http1_egress_cluster")
-	assert.Equal(t, egress.FilterChains[1].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "http2_egress_cluster")
+	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_egress")
+	assert.Equal(t, egress.FilterChains[1].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_egress")
+
+	assert.Equal(t, c.StaticResources.Clusters[0].Name, "h1_ingress")
+	assert.Equal(t, c.StaticResources.Clusters[1].Name, "h1_egress")
+	assert.Equal(t, c.StaticResources.Clusters[2].Name, "h2_ingress")
+	assert.Equal(t, c.StaticResources.Clusters[3].Name, "h2_egress")
+	assert.Equal(t, c.StaticResources.Clusters[4].Name, "tcp_ingress")
+	assert.Equal(t, c.StaticResources.Clusters[5].Name, "tcp_egress")
+	assert.Equal(t, c.StaticResources.Clusters[6].Name, "tracing_zipkin")
+
 }
 
 func TestCMDWithOptions(t *testing.T) {

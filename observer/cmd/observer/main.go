@@ -39,7 +39,7 @@ func init() {
 	viper.SetDefault("tracing_driver", "zipkin")
 	viper.BindEnv("tracing_driver")
 
-	viper.SetDefault("tracing_address", "zipkin.opsoss.svc.cluster.local")
+	viper.SetDefault("tracing_address", "zipkin.default.svc.cluster.local")
 	viper.BindEnv("tracing_address")
 
 	viper.SetDefault("tracing_port", 9411)

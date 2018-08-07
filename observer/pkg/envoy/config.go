@@ -1,19 +1,24 @@
 package envoy
 
-import "github.com/omnition/omnition-observer/observer/pkg/options"
+import (
+	"github.com/omnition/omnition-observer/observer/pkg/options"
+)
 
-func newFilterChain(direction int, protocol int, opts options.Options) FilterChain {
+func newFilterChain(
+	direction TrafficDirection,
+	protocol Protocol,
+	httpsRedirect bool,
+	opts options.Options,
+) FilterChain {
+
 	drName := "ingress"
 	if direction == EGRESS {
 		drName = "egress"
 	}
 
-	protoName := ""
+	protoLabel := ""
+	protoCode := ""
 	switch protocol {
-	case HTTP1:
-		protoName = "http1"
-	case HTTP2:
-		protoName = "http2"
 	case TCP:
 		return FilterChain{
 			Filters: []Filter{
@@ -26,14 +31,26 @@ func newFilterChain(direction int, protocol int, opts options.Options) FilterCha
 				},
 			},
 		}
+	case HTTP1:
+		protoLabel = "h1"
+		protoCode = "http/1.1"
+	case HTTP2:
+		protoLabel = "h2"
+		protoCode = "http/2.0"
 	}
 
+	label := protoLabel + "_" + drName
+
 	chain := FilterChain{
+		FilterChainMatch: FilterChainMatch{
+			ApplicationProtocols: protoCode,
+		},
+
 		Filters: []Filter{
 			Filter{
 				Name: "envoy.http_connection_manager",
 				Config: FilterConfig{
-					StatPrefix:        "omnition",
+					StatPrefix:        label,
 					CodecType:         "AUTO",
 					GenerateRequestID: true,
 					UseRemoteAddress:  true,
@@ -41,17 +58,14 @@ func newFilterChain(direction int, protocol int, opts options.Options) FilterCha
 						OperationName: drName,
 					},
 					RouteConfig: RouteConfig{
-						Name: protoName + "_route",
+						Name: label + "_route",
 						VirtualHosts: []VirtualHost{
 							VirtualHost{
-								Name:    protoName + "_vhost",
+								Name:    label + "_vhost",
 								Domains: []string{"*"},
 								Routes: []VirtualHostRoute{
 									VirtualHostRoute{
 										Match: VirtualHostRouteMatch{"/"},
-										Route: VirtualHostRouteRule{
-											Cluster: protoName + "_" + drName + "_cluster",
-										},
 									},
 								},
 							},
@@ -66,37 +80,57 @@ func newFilterChain(direction int, protocol int, opts options.Options) FilterCha
 		},
 	}
 
-	if protocol == HTTP1 {
-		chain.FilterChainMatch = FilterChainMatch{"http/1.1"}
-	} else if protocol == HTTP2 {
-		chain.FilterChainMatch = FilterChainMatch{"http/2"}
-	}
-
 	if opts.TLSEnabled {
-		chain.TLSContext = TLSContext{
-			CommonTLSContext{
-				[]TLSCertificate{
-					TLSCertificate{
-						CertificateChain: DataSource{
-							InlineString: opts.TLSCert,
-						},
-						PrivateKey: DataSource{
-							InlineString: opts.TLSKey,
+		// Setup TLS certificates
+		if direction == INGRESS && !httpsRedirect {
+			chain.TLSContext = TLSContext{
+				CommonTLSContext{
+					ALPNProtocols: protoCode,
+					TLSCertificates: []TLSCertificate{
+						TLSCertificate{
+							CertificateChain: DataSource{
+								InlineString: opts.TLSCert,
+							},
+							PrivateKey: DataSource{
+								InlineString: opts.TLSKey,
+							},
 						},
 					},
 				},
-			},
+			}
+		}
+
+		if httpsRedirect {
+			// Setup HTTP > HTTPS redirect
+			chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Redirect = VirtualHostRouteRedirect{
+				PathRedirect:  "/",
+				HTTPSRedirect: true,
+			}
+		} else {
+			// Setup actual route
+			if direction == INGRESS {
+				chain.FilterChainMatch.TransportProtocol = "tls"
+			}
+			chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = VirtualHostRouteCluster{
+				Cluster: protoLabel + "_" + drName + "_cluster",
+			}
+		}
+	} else {
+		// TLS not configured. Always handle route as is
+		chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = VirtualHostRouteCluster{
+			Cluster: protoLabel + "_" + drName + "_cluster",
 		}
 	}
+
 	return chain
 }
 
-func newListener(direction int, opts options.Options) Listener {
+func newListener(direction TrafficDirection, opts options.Options) Listener {
 	port := opts.IngressPort
-	name := "omnition_ingress_listener"
+	name := "ingress_listener"
 	if direction == EGRESS {
 		port = opts.EgressPort
-		name = "omnition_egress_listener"
+		name = "egress_listener"
 	}
 
 	listener := Listener{
@@ -110,38 +144,52 @@ func newListener(direction int, opts options.Options) Listener {
 		Transparent: true,
 		ListenerFilters: []ListenerFilter{
 			ListenerFilter{"envoy.listener.original_dst"},
-			ListenerFilter{"envoy.listener.text_protocol_inspector"},
 			ListenerFilter{"envoy.listener.tls_inspector"},
-		},
-		FilterChains: []FilterChain{
-			newFilterChain(direction, HTTP1, opts),
-			newFilterChain(direction, HTTP2, opts),
-			newFilterChain(direction, TCP, opts),
+			ListenerFilter{"envoy.listener.text_protocol_inspector"},
 		},
 	}
+
+	chains := []FilterChain{}
+
+	// HTTP1 Chain
+	chains = append(chains, newFilterChain(direction, HTTP1, false, opts))
+	// HTTP1 Chain
+	chains = append(chains, newFilterChain(direction, HTTP2, false, opts))
+
+	if direction == INGRESS && opts.TLSEnabled {
+		// HTTP > HTTPS redirect for incoming traffic
+		chains = append(chains, newFilterChain(direction, HTTP1, true, opts))
+		chains = append(chains, newFilterChain(direction, HTTP2, true, opts))
+	}
+
+	listener.FilterChains = append(chains, newFilterChain(direction, TCP, false, opts))
+
 	return listener
 }
 
-func newCluster(direction int, protocol int) Cluster {
+func newCluster(direction TrafficDirection, protocol Protocol, opts options.Options) Cluster {
 	drName := "ingress"
 	if direction == EGRESS {
 		drName = "egress"
 	}
 
-	protoName := ""
+	protoCode := ""
+	protoLabel := ""
 	features := ""
 	switch protocol {
 	case HTTP1:
-		protoName = "http1"
+		protoCode = "http/1.1"
+		protoLabel = "h1"
 	case HTTP2:
-		protoName = "http2"
+		protoCode = "http/2.0"
+		protoLabel = "h2"
 		features = "http2"
 	case TCP:
-		protoName = "tcp"
+		protoLabel = "tcp"
 	}
 
 	c := Cluster{
-		Name:           protoName + "_" + drName + "_cluster",
+		Name:           protoLabel + "_" + drName + "_cluster",
 		ConnectTimeout: "0.5s",
 		Type:           "ORIGINAL_DST",
 		LBPolicy:       "ORIGINAL_DST_LB",
@@ -152,13 +200,27 @@ func newCluster(direction int, protocol int) Cluster {
 			MaxConcurrentStreams: 2147483647,
 		}
 	}
+
+	if direction == EGRESS && opts.TLSEnabled && opts.TLSCACert != "" {
+		c.TLSContext = TLSContext{
+			CommonTLSContext{
+				ALPNProtocols: protoCode,
+				ValidationContext: ValidationContext{
+					DataSource{
+						InlineString: opts.TLSCACert,
+						//FileName: "/etc/ssl/certs/ca-certificates.crt",
+					},
+				},
+			},
+		}
+	}
 	return c
 }
 
 func newTracingCluster(opts options.Options) Cluster {
 	// TODO(owais): Add support for jaeger native tracing
 	return Cluster{
-		Name:           "zipkin_cluster",
+		Name:           "tracing_zipkin",
 		ConnectTimeout: "1s",
 		Type:           "strict_dns",
 		LBPolicy:       "round_robin",
@@ -190,15 +252,12 @@ func New(opts options.Options) (Config, error) {
 				newListener(EGRESS, opts),
 			},
 			Clusters: []Cluster{
-				newCluster(INGRESS, HTTP1),
-				newCluster(EGRESS, HTTP1),
-
-				newCluster(INGRESS, HTTP2),
-				newCluster(EGRESS, HTTP2),
-
-				newCluster(INGRESS, TCP),
-				newCluster(EGRESS, TCP),
-
+				newCluster(INGRESS, HTTP1, opts),
+				newCluster(EGRESS, HTTP1, opts),
+				newCluster(INGRESS, HTTP2, opts),
+				newCluster(EGRESS, HTTP2, opts),
+				newCluster(INGRESS, TCP, opts),
+				newCluster(EGRESS, TCP, opts),
 				newTracingCluster(opts),
 			},
 		},
@@ -206,7 +265,7 @@ func New(opts options.Options) (Config, error) {
 			TracingHTTP{
 				"envoy.zipkin",
 				TracingHTTPConfig{
-					"zipkin_cluster",
+					"tracing_zipkin",
 					"/api/v1/spans",
 				},
 			},

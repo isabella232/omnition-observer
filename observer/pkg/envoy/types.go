@@ -1,5 +1,7 @@
 package envoy
 
+type Protocol int
+
 const (
 	_ = iota
 	HTTP1
@@ -7,8 +9,10 @@ const (
 	TCP
 )
 
+type TrafficDirection int
+
 const (
-	_ = iota
+	_ TrafficDirection = iota
 	EGRESS
 	INGRESS
 )
@@ -28,20 +32,26 @@ type Admin struct {
 }
 
 type FilterChainMatch struct {
-	ApplicationProtocols string `yaml:"application_protocols"`
+	ApplicationProtocols string `yaml:"application_protocols,omitempty"`
+	TransportProtocol    string `yaml:"transport_protocol,omitempty"`
 }
 
 type VirtualHostRouteMatch struct {
 	Prefix string
 }
 
-type VirtualHostRouteRule struct {
+type VirtualHostRouteCluster struct {
 	Cluster string
+}
+type VirtualHostRouteRedirect struct {
+	PathRedirect  string `yaml:"path_redirect"`
+	HTTPSRedirect bool   `yaml:"https_redirect"`
 }
 
 type VirtualHostRoute struct {
-	Match VirtualHostRouteMatch
-	Route VirtualHostRouteRule
+	Match    VirtualHostRouteMatch
+	Route    VirtualHostRouteCluster  `yaml:",omitempty"`
+	Redirect VirtualHostRouteRedirect `yaml:",omitempty"`
 }
 
 type VirtualHost struct {
@@ -72,7 +82,7 @@ type FilterConfig struct {
 	Tracing           FilterConfigTracing `yaml:",omitempty"`
 	RouteConfig       RouteConfig         `yaml:"route_config,omitempty"`
 	HTTPFilters       []HTTPFilter        `yaml:"http_filters,omitempty"`
-	Cluster           string
+	Cluster           string              `yaml:"cluster,omitempty"`
 }
 
 type Filter struct {
@@ -81,8 +91,8 @@ type Filter struct {
 }
 
 type DataSource struct {
-	// add other ways to specify data like path to file
-	InlineString string `yaml:"inline_string"`
+	InlineString string `yaml:"inline_string,omitempty"`
+	FileName     string `yaml:"filename,omitempty"`
 }
 
 type TLSCertificate struct {
@@ -90,8 +100,14 @@ type TLSCertificate struct {
 	PrivateKey       DataSource `yaml:"private_key"`
 }
 
+type ValidationContext struct {
+	TrustedCA DataSource `yaml:"trusted_ca"`
+}
+
 type CommonTLSContext struct {
-	TLSCertificates []TLSCertificate `yaml:"tls_certificate"`
+	ALPNProtocols     string            `yaml:"alpn_protocols,omitempty"`
+	TLSCertificates   []TLSCertificate  `yaml:"tls_certificates,omitempty"`
+	ValidationContext ValidationContext `yaml:"validation_context,omitempty"`
 }
 
 type TLSContext struct {
@@ -127,7 +143,8 @@ type Cluster struct {
 	LBPolicy             string               `yaml:"lb_policy"`
 	Features             string               `yaml:",omitempty"`
 	HTTP2ProtocolOptions HTTP2ProtocolOptions `yaml:"http2_protocol_options,omitempty"`
-	Hosts                []ClusterHost
+	TLSContext           TLSContext           `yaml:"tls_context,omitempty"`
+	Hosts                []ClusterHost        `yaml:"hosts,omitempty"`
 }
 
 type ClusterHost struct {

@@ -21,6 +21,13 @@ export OBS_EGRESS_PORT=$EGRESS_PORT
 
 export SERVICE_NAME=${SERVICE_NAME:-'unknown-service'}
 
+
+TODO(owais): Test system wide CA cert approval 
+#if [ -z "$OBS_CA_CERT" ]; then
+#  echo $OBS_CA_CERT > /usr/local/share/ca-certificates/envoy.crt
+#  update-ca-certificates
+#fi
+
 echo "setting up roles"
 if ! getent passwd omnition-proxy >/dev/null; then
     groupadd --gid 1337 omnition-proxy
@@ -45,8 +52,6 @@ chmod o+rx /usr/local/bin/envoy
 # "-m owner --gid-owner omnition-proxy" iptables rule in prepare_proxy.sh.
 chmod 2755 /usr/local/bin/envoy
 chgrp omnition-proxy /usr/local/bin/envoy
-
-# envsubst < /etc/envoy_tmpl.yaml > /etc/envoy.yaml
 
 observer > /etc/envoy.yaml
 
