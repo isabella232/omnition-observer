@@ -22,7 +22,7 @@ export OBS_EGRESS_PORT=$EGRESS_PORT
 export SERVICE_NAME=${SERVICE_NAME:-'unknown-service'}
 
 
-TODO(owais): Test system wide CA cert approval 
+# TODO(owais): Test system wide CA cert approval 
 #if [ -z "$OBS_CA_CERT" ]; then
 #  echo $OBS_CA_CERT > /usr/local/share/ca-certificates/envoy.crt
 #  update-ca-certificates

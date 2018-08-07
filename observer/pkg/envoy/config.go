@@ -220,7 +220,7 @@ func newCluster(direction TrafficDirection, protocol Protocol, opts options.Opti
 func newTracingCluster(opts options.Options) Cluster {
 	// TODO(owais): Add support for jaeger native tracing
 	return Cluster{
-		Name:           "tracing_zipkin",
+		Name:           "tracing_zipkin_cluster",
 		ConnectTimeout: "1s",
 		Type:           "strict_dns",
 		LBPolicy:       "round_robin",
@@ -265,7 +265,7 @@ func New(opts options.Options) (Config, error) {
 			TracingHTTP{
 				"envoy.zipkin",
 				TracingHTTPConfig{
-					"tracing_zipkin",
+					"tracing_zipkin_cluster",
 					"/api/v1/spans",
 				},
 			},

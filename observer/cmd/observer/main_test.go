@@ -64,27 +64,27 @@ func TestCMDBasic(t *testing.T) {
 	ingress := c.StaticResources.Listeners[0]
 	egress := c.StaticResources.Listeners[1]
 
-	assert.Equal(t, ingress.Name, "omnition_ingress_listener")
+	assert.Equal(t, ingress.Name, "ingress_listener")
 	assert.Equal(t, ingress.Address.SocketAddress.PortValue, 15001)
 	assert.Equal(t, len(ingress.FilterChains), 3)
 	assert.Equal(t, ingress.FilterChains[0].Filters[0].Config.Tracing.OperationName, "ingress")
-	assert.Equal(t, ingress.FilterChains[0].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_ingress")
-	assert.Equal(t, ingress.FilterChains[1].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_ingress")
+	assert.Equal(t, ingress.FilterChains[0].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_ingress_cluster")
+	assert.Equal(t, ingress.FilterChains[1].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_ingress_cluster")
 
-	assert.Equal(t, egress.Name, "omnition_egress_listener")
+	assert.Equal(t, egress.Name, "egress_listener")
 	assert.Equal(t, egress.Address.SocketAddress.PortValue, 15002)
 	assert.Equal(t, len(egress.FilterChains), 3)
 	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.Tracing.OperationName, "egress")
-	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_egress")
-	assert.Equal(t, egress.FilterChains[1].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_egress")
+	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_egress_cluster")
+	assert.Equal(t, egress.FilterChains[1].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_egress_cluster")
 
-	assert.Equal(t, c.StaticResources.Clusters[0].Name, "h1_ingress")
-	assert.Equal(t, c.StaticResources.Clusters[1].Name, "h1_egress")
-	assert.Equal(t, c.StaticResources.Clusters[2].Name, "h2_ingress")
-	assert.Equal(t, c.StaticResources.Clusters[3].Name, "h2_egress")
-	assert.Equal(t, c.StaticResources.Clusters[4].Name, "tcp_ingress")
-	assert.Equal(t, c.StaticResources.Clusters[5].Name, "tcp_egress")
-	assert.Equal(t, c.StaticResources.Clusters[6].Name, "tracing_zipkin")
+	assert.Equal(t, c.StaticResources.Clusters[0].Name, "h1_ingress_cluster")
+	assert.Equal(t, c.StaticResources.Clusters[1].Name, "h1_egress_cluster")
+	assert.Equal(t, c.StaticResources.Clusters[2].Name, "h2_ingress_cluster")
+	assert.Equal(t, c.StaticResources.Clusters[3].Name, "h2_egress_cluster")
+	assert.Equal(t, c.StaticResources.Clusters[4].Name, "tcp_ingress_cluster")
+	assert.Equal(t, c.StaticResources.Clusters[5].Name, "tcp_egress_cluster")
+	assert.Equal(t, c.StaticResources.Clusters[6].Name, "tracing_zipkin_cluster")
 
 }
 
@@ -143,25 +143,12 @@ func TestCMDWithOptions(t *testing.T) {
 
 			case "OBS_INGRESS_PORT":
 				assert.Equal(t, v, strconv.Itoa(c.StaticResources.Listeners[0].Address.SocketAddress.PortValue))
-				assert.Equal(t, "omnition_ingress_listener", c.StaticResources.Listeners[0].Name)
+				assert.Equal(t, "ingress_listener", c.StaticResources.Listeners[0].Name)
 
 			case "OBS_EGRESS_PORT":
 				assert.Equal(t, v, strconv.Itoa(c.StaticResources.Listeners[1].Address.SocketAddress.PortValue))
-				assert.Equal(t, "omnition_egress_listener", c.StaticResources.Listeners[1].Name)
+				assert.Equal(t, "egress_listener", c.StaticResources.Listeners[1].Name)
 
-			case "OBS_TLS_ENABLED", "OBS_TLS_CERT", "OBS_TLS_KEY":
-				if envSet["OBS_TLS_ENABLED"] == "true" {
-					if envSet["OBS_TLS_CERT"] == "" || envSet["OBS_TLS_KEY"] == "" {
-						assert.NotNil(t, cmdErr)
-						assert.Contains(t, string(output), "TLS cannot be enabled without certificate cert and key")
-					} else {
-						certs := c.StaticResources.Listeners[0].FilterChains[0].TLSContext.CommonTLSContext.TLSCertificates[0]
-						assert.Equal(t, envSet["OBS_TLS_CERT"], certs.CertificateChain.InlineString)
-						assert.Equal(t, envSet["OBS_TLS_KEY"], certs.PrivateKey.InlineString)
-					}
-				} else {
-					assert.Nil(t, c.StaticResources.Listeners[0].FilterChains[0].TLSContext)
-				}
 			case "OBS_TRACING_DRIVER":
 				// hardcoded to zipkin right now
 				assert.Equal(t, "envoy.zipkin", c.Tracing.HTTP.Name)
@@ -171,6 +158,46 @@ func TestCMDWithOptions(t *testing.T) {
 
 			case "OBS_TRACING_PORT":
 				assert.Equal(t, v, strconv.Itoa(c.StaticResources.Clusters[6].Hosts[0].SocketAddress.PortValue))
+
+			case "OBS_TLS_ENABLED", "OBS_TLS_CERT", "OBS_TLS_KEY":
+				if envSet["OBS_TLS_ENABLED"] == "true" {
+					if envSet["OBS_TLS_CERT"] == "" || envSet["OBS_TLS_KEY"] == "" {
+						assert.NotNil(t, cmdErr)
+						assert.Contains(t, string(output), "TLS cannot be enabled without certificate cert and key")
+					} else {
+
+						httpChain := c.StaticResources.Listeners[0].FilterChains[0]
+						http2Chain := c.StaticResources.Listeners[0].FilterChains[1]
+
+						certs1 := httpChain.TLSContext.CommonTLSContext.TLSCertificates[0]
+						assert.Equal(t, envSet["OBS_TLS_CERT"], certs1.CertificateChain.InlineString)
+						assert.Equal(t, envSet["OBS_TLS_KEY"], certs1.PrivateKey.InlineString)
+						route1 := httpChain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0]
+						assert.False(t, route1.Redirect.HTTPSRedirect)
+						assert.Empty(t, route1.Redirect.PathRedirect)
+						assert.Equal(t, "h1_ingress_cluster", route1.Route.Cluster)
+
+						certs2 := http2Chain.TLSContext.CommonTLSContext.TLSCertificates[0]
+						assert.Equal(t, envSet["OBS_TLS_CERT"], certs2.CertificateChain.InlineString)
+						assert.Equal(t, envSet["OBS_TLS_KEY"], certs2.PrivateKey.InlineString)
+						route2 := http2Chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0]
+						assert.False(t, route2.Redirect.HTTPSRedirect)
+						assert.Empty(t, route2.Redirect.PathRedirect)
+						assert.Equal(t, "h2_ingress_cluster", route2.Route.Cluster)
+
+						route3 := c.StaticResources.Listeners[0].FilterChains[2].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0]
+						assert.Empty(t, route3.Route.Cluster)
+						assert.Equal(t, true, route3.Redirect.HTTPSRedirect)
+						assert.Equal(t, "/", route3.Redirect.PathRedirect)
+
+						route4 := c.StaticResources.Listeners[0].FilterChains[3].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0]
+						assert.Empty(t, route4.Route.Cluster)
+						assert.Equal(t, true, route4.Redirect.HTTPSRedirect)
+						assert.Equal(t, "/", route4.Redirect.PathRedirect)
+					}
+				} else {
+					assert.Nil(t, c.StaticResources.Listeners[0].FilterChains[0].TLSContext)
+				}
 
 			default:
 				assert.Fail(t, "Don't know how to test env var: "+k)
