@@ -82,7 +82,7 @@ void Filter::onRead() {
     }
 
     if (StringUtil::caseFindToken(data_view, " \n", "HTTP/2.0")) {
-      protocols.emplace_back("http/2");
+      protocols.emplace_back("h2");
     }
 
     cb_->socket().setRequestedApplicationProtocols(protocols);

@@ -110,7 +110,7 @@ static_resources:
                 GDvsBuR0WVzZTQqIBMSPAY76
                 -----END PRIVATE KEY-----
     - filter_chain_match:
-        application_protocols: http/2
+        application_protocols: h2
         transport_protocol: tls
       filters:
       - name: envoy.http_connection_manager
@@ -140,6 +140,7 @@ static_resources:
             config: {}
       tls_context:
         common_tls_context:
+          alpn_protocols: h2
           tls_certificates:
           - certificate_chain:
               inline_string: |-
@@ -283,7 +284,7 @@ static_resources:
             config: {}
 
     - filter_chain_match:
-        application_protocols: http/2
+        application_protocols: h2
       filters:
       - name: envoy.http_connection_manager
         config:
@@ -377,6 +378,7 @@ static_resources:
       max_concurrent_streams: 2147483647
     tls_context:
       common_tls_context:
+        alpn_protocols: h2
         validation_context:
           trusted_ca:
             inline_string: |-
