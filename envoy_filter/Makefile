@@ -23,7 +23,7 @@ pull-build-image:
 	docker pull $(BUILD_IMAGE)
 
 docker-run:
-	docker run -d --name="$(CONTAINER_NAME)" -v "$(CURDIR)":/source -v "$(CURDIR)/caches/home/.cache":"/root/.cache" -e HOST_USERID=`id -u` -e HOST_GROUPID=`id -g` $(BUILD_IMAGE) bash
+	docker run --rm -d -it --name="$(CONTAINER_NAME)" -v "$(CURDIR)":/source -v "$(CURDIR)/caches/home/.cache":"/root/.cache" -e HOST_USERID=`id -u` -e HOST_GROUPID=`id -g` $(BUILD_IMAGE) bash
 	$(MAKE) docker-exec DOCKER_CMD=$(DOCKER_CMD)
 
 docker-exec:
