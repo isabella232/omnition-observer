@@ -2,6 +2,13 @@
 
 DOCKER_CMD ?= sh
 
+docker_run_args =--rm -it
+# run_cmd = bash
+ifeq ($(IS_CI), true)
+	docker_run_args =--rm -i
+	# run_cmd = $(DOCKER_CMD)
+endif
+
 # Docker commands
 build-image:
 	docker build -t observer-build .
@@ -13,7 +20,7 @@ sh:
 	$(MAKE) docker_cmd DOCKER_CMD="sh"
 
 docker_cmd: build-image
-	docker run --rm -e USER_ID=`id -u` -it -v "$(PWD)":"/src" observer-build $(DOCKER_CMD)
+	docker run $(docker_run_args) -e USER_ID=`id -u` -v "$(PWD)":"/src" observer-build $(DOCKER_CMD)
 
 # Native commands
 go_clean:
