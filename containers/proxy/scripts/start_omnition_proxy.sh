@@ -4,9 +4,29 @@ set -e
 
 umask 022
 
-export ZIPKIN_HOST=${ZIPKIN_HOST:-'zipkin'}
-export ZIPKIN_PORT=${ZIPKIN_PORT:-9411}
+export OBS_TRACING_DRIVER=$TRACING_DRIVER
+export OBS_TRACING_HOST=$TRACING_HOST
+export OBS_TRACING_PORT=$TRACING_PORT
+
+export OBS_TLS_ENABLED=$TLS_ENABLED
+export OBS_TLS_CERT=$TLS_CERT
+export OBS_TLS_KEY=$TLS_KEY
+export OBS_TLS_CA_CERT=$TLS_CA_CERT
+
+export OBS_ADMIN_PORT=$ADMIN_PORT
+export OBS_ADMIN_LOG_PATH=$ADMIN_LOG_PATH
+
+export OBS_INGRESS_PORT=$INGRESS_PORT
+export OBS_EGRESS_PORT=$EGRESS_PORT
+
 export SERVICE_NAME=${SERVICE_NAME:-'unknown-service'}
+
+
+# TODO(owais): Test system wide CA cert approval 
+#if [ -z "$OBS_CA_CERT" ]; then
+#  echo $OBS_CA_CERT > /usr/local/share/ca-certificates/envoy.crt
+#  update-ca-certificates
+#fi
 
 echo "setting up roles"
 if ! getent passwd omnition-proxy >/dev/null; then
@@ -18,10 +38,11 @@ fi
 mkdir -p /var/lib/omnition/envoy
 mkdir -p /var/lib/omnition/proxy
 mkdir -p /var/lib/omnition/config
-mkdir -p /var/log/omnition
+mkdir -p /var/lib/omnition/tls
+mkdir -p /var/log/omnition/
 
-chown omnition-proxy.omnition-proxy /var/lib/omnition/envoy /var/lib/omnition/config /var/log/omnition /var/lib/omnition/proxy
 echo "setting up permissions"
+chown -R omnition-proxy:omnition-proxy /var/lib/omnition/ /var/log/omnition
 chmod o+rx /usr/local/bin/envoy
 
 # envoy may run with effective uid 0 in order to run envoy with
@@ -32,7 +53,7 @@ chmod o+rx /usr/local/bin/envoy
 chmod 2755 /usr/local/bin/envoy
 chgrp omnition-proxy /usr/local/bin/envoy
 
-envsubst < /etc/envoy_tmpl.yaml > /etc/envoy.yaml
+observer > /etc/envoy.yaml
 
 if [ $1 = "show-config" ];
   then
