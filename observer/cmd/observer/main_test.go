@@ -97,13 +97,13 @@ func TestCMDWithOptions(t *testing.T) {
 	// TODO(owais): Improve tabel tests by storing expected results in the table
 	envSets := []map[string]string{
 		map[string]string{
-			"OBS_ADMIN_PORT":      "2020",
-			"OBS_ADMIN_LOG_PATH":  "dasdkjasd",
-			"OBS_INGRESS_PORT":    "12345",
-			"OBS_TRACING_DRIVER":  "gibberish",
-			"OBS_TRACING_ADDRESS": "my-tracing-address",
-			"OBS_TRACING_PORT":    "6543",
-			"OBS_EGRESS_PORT":     "54321",
+			"OBS_ADMIN_PORT":     "2020",
+			"OBS_ADMIN_LOG_PATH": "dasdkjasd",
+			"OBS_INGRESS_PORT":   "12345",
+			"OBS_TRACING_DRIVER": "gibberish",
+			"OBS_TRACING_HOST":   "my-tracing-address",
+			"OBS_TRACING_PORT":   "6543",
+			"OBS_EGRESS_PORT":    "54321",
 		},
 		map[string]string{
 			"OBS_TLS_ENABLED": "true",
@@ -153,7 +153,7 @@ func TestCMDWithOptions(t *testing.T) {
 				// hardcoded to zipkin right now
 				assert.Equal(t, "envoy.zipkin", c.Tracing.HTTP.Name)
 
-			case "OBS_TRACING_ADDRESS":
+			case "OBS_TRACING_HOST":
 				assert.Equal(t, v, c.StaticResources.Clusters[6].Hosts[0].SocketAddress.Address)
 
 			case "OBS_TRACING_PORT":

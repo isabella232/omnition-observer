@@ -17,7 +17,8 @@ func newFilterChain(
 	}
 
 	protoLabel := ""
-	protoCode := ""
+	alpnProtocol := ""
+	filterMatchProto := "http/1.1"
 	switch protocol {
 	case TCP:
 		return FilterChain{
@@ -33,17 +34,19 @@ func newFilterChain(
 		}
 	case HTTP1:
 		protoLabel = "h1"
-		protoCode = "http/1.1"
+		alpnProtocol = "http/1.1"
+		filterMatchProto = "http/1.1"
 	case HTTP2:
 		protoLabel = "h2"
-		protoCode = "http/2.0"
+		alpnProtocol = "http/2.0"
+		filterMatchProto = "h2"
 	}
 
 	label := protoLabel + "_" + drName
 
 	chain := FilterChain{
 		FilterChainMatch: FilterChainMatch{
-			ApplicationProtocols: protoCode,
+			ApplicationProtocols: filterMatchProto,
 		},
 
 		Filters: []Filter{
@@ -85,7 +88,7 @@ func newFilterChain(
 		if direction == INGRESS && !httpsRedirect {
 			chain.TLSContext = TLSContext{
 				CommonTLSContext{
-					ALPNProtocols: protoCode,
+					ALPNProtocols: alpnProtocol,
 					TLSCertificates: []TLSCertificate{
 						TLSCertificate{
 							CertificateChain: DataSource{
@@ -173,15 +176,15 @@ func newCluster(direction TrafficDirection, protocol Protocol, opts options.Opti
 		drName = "egress"
 	}
 
-	protoCode := ""
+	alpnProtocol := ""
 	protoLabel := ""
 	features := ""
 	switch protocol {
 	case HTTP1:
-		protoCode = "http/1.1"
+		alpnProtocol = "http/1.1"
 		protoLabel = "h1"
 	case HTTP2:
-		protoCode = "http/2.0"
+		alpnProtocol = "http/2.0"
 		protoLabel = "h2"
 		features = "http2"
 	case TCP:
@@ -204,7 +207,7 @@ func newCluster(direction TrafficDirection, protocol Protocol, opts options.Opti
 	if direction == EGRESS && opts.TLSEnabled && opts.TLSCACert != "" {
 		c.TLSContext = TLSContext{
 			CommonTLSContext{
-				ALPNProtocols: protoCode,
+				ALPNProtocols: alpnProtocol,
 				ValidationContext: ValidationContext{
 					DataSource{
 						InlineString: opts.TLSCACert,
