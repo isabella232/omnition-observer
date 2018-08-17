@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package io.omnition.envoy.v1;
+
+import "validate/validate.proto";
+
+message ProtocolAnnotator {
+    string header_name = 1 [(validate.rules).string.min_bytes = 1];
+}

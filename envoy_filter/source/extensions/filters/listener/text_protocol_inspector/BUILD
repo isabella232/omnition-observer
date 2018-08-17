@@ -35,13 +35,6 @@ envoy_cc_library(
     deps = [
         "@envoy//include/envoy/registry",
         "@envoy//include/envoy/server:filter_config_interface",
-        # "//source/extensions/filters/listener:well_known_names",
         "//source/extensions/filters/listener/text_protocol_inspector:text_protocol_inspector_lib",
     ],
-    #deps = [
-    #    "//include/envoy/registry",
-    #    "//include/envoy/server:filter_config_interface",
-    #    "//source/extensions/filters/listener:well_known_names",
-    #    "//source/extensions/filters/listener/text_protocol_inspector:text_protocol_inspector_lib",
-    #],
 )
