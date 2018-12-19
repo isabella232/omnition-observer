@@ -6,8 +6,4 @@ envoy_filter/build/
 observer/build
 observer/caches
 
-bazel-bin
-bazel-genfiles
-bazel-out
-bazel-source
-bazel-testlogs
+bazel-*

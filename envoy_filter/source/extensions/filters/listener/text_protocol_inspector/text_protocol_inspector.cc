@@ -54,22 +54,21 @@ thread_local uint8_t Filter::buf_[64 * 1024];
 
 void Filter::onRead() {
   auto& os_syscalls = Api::OsSysCallsSingleton::get();
-  ssize_t n = os_syscalls.recv(cb_->socket().fd(), buf_, 64 * 1024, MSG_PEEK);
-  const int error = errno; // Latch errno right after the recv call.
-
-  if (n == -1 && error == EAGAIN) {
+  const Api::SysCallSizeResult result =
+            os_syscalls.recv(cb_->socket().fd(), buf_,  64 * 1024, MSG_PEEK);
+  if (result.rc_ == -1 && result.errno_ == EAGAIN) {
     return;
-  } else if (n < 0) {
+  } else if (result.rc_ < 0) {
     done(false);
     return;
   }
 
   // Because we're doing a MSG_PEEK, data we've seen before gets returned every time, so
   // skip over what we've already processed.
-  if (static_cast<uint64_t>(n) > read_) {
+  if (static_cast<uint64_t>(result.rc_) > read_) {
     const uint8_t* data = buf_ + read_;
-    const size_t len = n - read_;
-    read_ = n;
+    const size_t len = result.rc_ - read_;
+    read_ = result.rc_;
 
     /*
     std::cout << "==========================\n";
