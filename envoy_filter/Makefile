@@ -3,7 +3,7 @@
 DOCKER_CMD=bash
 
 CONTAINER_NAME?=envoy-build
-BUILD_IMAGE_TAG?=55606ec3f0810683e9cab31b2f9db2f2cdb43ac0
+BUILD_IMAGE_TAG?=a734887ad06609cf0b3c023d38239bf3e79d3717 # Dec 18, 2018
 BUILD_IMAGE?=envoyproxy/envoy-build:$(BUILD_IMAGE_TAG)
 
 IS_RUNNING = $(shell docker inspect -f {{.State.Running}} $(CONTAINER_NAME))
