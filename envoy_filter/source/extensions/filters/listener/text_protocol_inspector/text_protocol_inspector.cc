@@ -9,7 +9,6 @@
 #include "envoy/common/exception.h"
 #include "envoy/event/dispatcher.h"
 #include "envoy/network/listen_socket.h"
-#include "envoy/stats/scope.h"
 
 #include "common/api/os_sys_calls_impl.h"
 #include "common/common/assert.h"
@@ -55,7 +54,7 @@ thread_local uint8_t Filter::buf_[64 * 1024];
 
 void Filter::onRead() {
   auto& os_syscalls = Api::OsSysCallsSingleton::get();
-  ssize_t n = os_syscalls.recv(cb_->socket().fd(), buf_, 64 * 1024, MSG_PEEK).rc_;
+  ssize_t n = os_syscalls.recv(cb_->socket().fd(), buf_, 64 * 1024, MSG_PEEK);
   const int error = errno; // Latch errno right after the recv call.
 
   if (n == -1 && error == EAGAIN) {

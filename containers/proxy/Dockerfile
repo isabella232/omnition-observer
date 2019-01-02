@@ -1,4 +1,4 @@
-FROM envoyproxy/envoy:v1.8.0
+FROM envoyproxy/envoy:v1.7.0
 
 RUN apt update && apt-get install -y \
     iproute2 \
