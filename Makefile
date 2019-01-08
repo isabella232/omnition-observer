@@ -1,3 +1,5 @@
+PROXY_VERSION?=`cat VERSION`
+
 .PHONY: build publish build-envoy
 
 all: build

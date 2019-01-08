@@ -141,7 +141,6 @@ type Cluster struct {
 	ConnectTimeout       string `yaml:"connect_timeout"`
 	Type                 string
 	LBPolicy             string               `yaml:"lb_policy"`
-	Features             string               `yaml:",omitempty"`
 	HTTP2ProtocolOptions HTTP2ProtocolOptions `yaml:"http2_protocol_options,omitempty"`
 	TLSContext           TLSContext           `yaml:"tls_context,omitempty"`
 	Hosts                []ClusterHost        `yaml:"hosts,omitempty"`

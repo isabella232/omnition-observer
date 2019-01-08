@@ -178,7 +178,6 @@ func newCluster(direction TrafficDirection, protocol Protocol, opts options.Opti
 
 	alpnProtocol := ""
 	protoLabel := ""
-	features := ""
 	switch protocol {
 	case HTTP1:
 		alpnProtocol = "http/1.1"
@@ -186,7 +185,6 @@ func newCluster(direction TrafficDirection, protocol Protocol, opts options.Opti
 	case HTTP2:
 		alpnProtocol = "http/2.0"
 		protoLabel = "h2"
-		features = "http2"
 	case TCP:
 		protoLabel = "tcp"
 	}
@@ -196,7 +194,6 @@ func newCluster(direction TrafficDirection, protocol Protocol, opts options.Opti
 		ConnectTimeout: "0.5s",
 		Type:           "ORIGINAL_DST",
 		LBPolicy:       "ORIGINAL_DST_LB",
-		Features:       features,
 	}
 	if protocol == HTTP2 {
 		c.HTTP2ProtocolOptions = HTTP2ProtocolOptions{
