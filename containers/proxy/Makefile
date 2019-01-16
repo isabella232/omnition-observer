@@ -10,7 +10,7 @@ publish: build
 	docker push $(DOCKER_REGISTRY)/omnition/proxy:$(PROXY_VERSION)
 
 run: build
-	docker run -it --rm --name omnition-proxy -e 'ZIPKIN_HOST="zipkin_host"' omnition/proxy:$(PROXY_VERSION_TO_USE) "show-config"
+	docker run -it --rm --name omnition-proxy -e 'ZIPKIN_HOST="zipkin_host"' omnition/proxy:$(PROXY_VERSION) "show-config"
 
 run-show-config: build
-	docker run -it --rm --name omnition-proxy -e 'ZIPKIN_HOST="hello"' omnition/proxy:$(PROXY_VERSION_TO_USE) "show-config"
+	docker run -it --rm --name omnition-proxy -e 'ZIPKIN_HOST="hello"' omnition/proxy:$(PROXY_VERSION) "show-config"
