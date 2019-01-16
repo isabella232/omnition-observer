@@ -1,4 +1,4 @@
-PROXY_VERSION?=`cat VERSION`
+PROXY_VERSION?=$$(cat VERSION)
 
 .PHONY: build publish build-envoy
 
@@ -23,5 +23,6 @@ build-container-proxy:
 	@$(MAKE) -C containers/proxy build
 
 publish: build
-	@$(MAKE) -C containers/init publish
-	@$(MAKE) -C containers/proxy publish
+	@echo "Publishing version: " $(PROXY_VERSION)
+	@$(MAKE) -C containers/init publish PROXY_VERSION=${PROXY_VERSION}
+	@$(MAKE) -C containers/proxy publish PROXY_VERSION=${PROXY_VERSION}
