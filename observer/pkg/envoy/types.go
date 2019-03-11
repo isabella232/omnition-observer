@@ -1,5 +1,7 @@
 package envoy
 
+import "time"
+
 type Protocol int
 
 const (
@@ -36,12 +38,26 @@ type FilterChainMatch struct {
 	TransportProtocol    string `yaml:"transport_protocol,omitempty"`
 }
 
+type RetryPriority struct{}
+type RetryHostPredicate struct{}
+
+type RetryPolicy struct {
+	RetryOn                       string             `yaml:"retry_on"`
+	NumRetries                    uint32             `yaml:"num_retries,omitempty"`
+	PerRetryTimeout               *time.Duration     `yaml:"per_try_timeout,omitempty"`
+	RetryPriority                 RetryPriority      `yaml:"retry_priority,omitempty"`
+	RetryHostPredicate            RetryHostPredicate `yaml:"retry_host_predicate,omitempty"`
+	HostSelectionRetryMaxAttempts int64              `yaml:"host_selection_retry_max_attempts,omitempty"`
+	RetriableStatusCodes          []uint32           `yaml:"retriable_status_code,omitempty"`
+}
+
 type VirtualHostRouteMatch struct {
 	Prefix string
 }
 
 type VirtualHostRouteCluster struct {
-	Cluster string
+	Cluster     string
+	RetryPolicy RetryPolicy
 }
 type VirtualHostRouteRedirect struct {
 	PathRedirect  string `yaml:"path_redirect"`
