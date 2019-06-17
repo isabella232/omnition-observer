@@ -44,10 +44,12 @@ func init() {
 
 	viper.SetDefault("tracing_port", 9411)
 	viper.BindEnv("tracing_port")
+
+	viper.SetDefault("timeout", "15s")
+	viper.BindEnv("timeout")
 }
 
 func main() {
-
 	opts, err := options.New(
 		viper.GetInt("ingress_port"),
 		viper.GetInt("egress_port"),
@@ -63,6 +65,8 @@ func main() {
 
 		viper.GetInt("admin_port"),
 		viper.GetString("admin_log_path"),
+
+		viper.GetDuration("timeout"),
 	)
 	if err != nil {
 		log.Fatal(err)

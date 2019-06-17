@@ -1,6 +1,8 @@
 package options
 
 import (
+	"time"
+
 	"github.com/ansel1/merry"
 )
 
@@ -26,40 +28,45 @@ type Options struct {
 	TracingDriver string
 	TracingHost   string
 	TracingPort   int
+
+	TimeoutDuration time.Duration
 }
 
 func New(
-	IngressPort int,
-	EgressPort int,
-	TracingDriver string,
-	TracingHost string,
-	TracingPort int,
-	TLSEnabled bool,
-	TLSCACert string,
-	TLSCert string,
-	TLSKey string,
-	AdminPort int,
-	AdminLogPath string,
+	ingressPort int,
+	egressPort int,
+	tracingDriver string,
+	tracingHost string,
+	tracingPort int,
+	tlsEnabled bool,
+	tlsCACert string,
+	tlsCert string,
+	tlsKey string,
+	adminPort int,
+	adminLogPath string,
+	timeoutDuration time.Duration,
 ) (Options, error) {
-	if TLSEnabled {
-		if TLSCert == "" || TLSKey == "" {
+	if tlsEnabled {
+		if tlsCert == "" || tlsKey == "" {
 			return Options{}, merry.New("TLS cannot be enabled without certificate cert and key")
 		}
 	}
 	return Options{
-		IngressPort: IngressPort,
-		EgressPort:  EgressPort,
+		IngressPort: ingressPort,
+		EgressPort:  egressPort,
 
-		TracingDriver: TracingDriver,
-		TracingHost:   TracingHost,
-		TracingPort:   TracingPort,
+		TracingDriver: tracingDriver,
+		TracingHost:   tracingHost,
+		TracingPort:   tracingPort,
 
-		TLSEnabled: TLSEnabled,
-		TLSCert:    TLSCert,
-		TLSCACert:  TLSCACert,
-		TLSKey:     TLSKey,
+		TLSEnabled: tlsEnabled,
+		TLSCert:    tlsCert,
+		TLSCACert:  tlsCACert,
+		TLSKey:     tlsKey,
 
-		AdminPort:    AdminPort,
-		AdminLogPath: AdminLogPath,
+		AdminPort:    adminPort,
+		AdminLogPath: adminLogPath,
+
+		TimeoutDuration: timeoutDuration,
 	}, nil
 }

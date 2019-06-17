@@ -11,3 +11,5 @@ bazel-genfiles
 bazel-out
 bazel-source
 bazel-testlogs
+
+.vscode/

@@ -114,18 +114,26 @@ func newFilterChain(
 			if direction == INGRESS {
 				chain.FilterChainMatch.TransportProtocol = "tls"
 			}
-			chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = VirtualHostRouteCluster{
-				Cluster: protoLabel + "_" + drName + "_cluster",
-			}
+			chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = newVirtualHostRouteCluster(
+				direction, protoLabel+"_"+drName+"_cluster", opts,
+			)
 		}
 	} else {
 		// TLS not configured. Always handle route as is
-		chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = VirtualHostRouteCluster{
-			Cluster: protoLabel + "_" + drName + "_cluster",
-		}
+		chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = newVirtualHostRouteCluster(
+			direction, protoLabel+"_"+drName+"_cluster", opts,
+		)
 	}
 
 	return chain
+}
+
+func newVirtualHostRouteCluster(direction TrafficDirection, name string, opts options.Options) VirtualHostRouteCluster {
+	c := VirtualHostRouteCluster{Cluster: name}
+	if direction == INGRESS {
+		c.Timeout = &opts.TimeoutDuration
+	}
+	return c
 }
 
 func newListener(direction TrafficDirection, opts options.Options) Listener {

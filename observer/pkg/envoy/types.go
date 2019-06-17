@@ -1,5 +1,7 @@
 package envoy
 
+import "time"
+
 type Protocol int
 
 const (
@@ -42,6 +44,7 @@ type VirtualHostRouteMatch struct {
 
 type VirtualHostRouteCluster struct {
 	Cluster string
+	Timeout *time.Duration `yaml:"timeout,omitempty"`
 }
 type VirtualHostRouteRedirect struct {
 	PathRedirect  string `yaml:"path_redirect"`
