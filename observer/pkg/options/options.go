@@ -25,9 +25,10 @@ type Options struct {
 	IngressPort  int
 	EgressPort   int
 
-	TracingDriver string
-	TracingHost   string
-	TracingPort   int
+	TracingDriver     string
+	TracingHost       string
+	TracingPort       int
+	TracingTagHeaders []string
 
 	TimeoutDuration time.Duration
 }
@@ -38,6 +39,7 @@ func New(
 	tracingDriver string,
 	tracingHost string,
 	tracingPort int,
+	tracingTagHeaders []string,
 	tlsEnabled bool,
 	tlsCACert string,
 	tlsCert string,
@@ -55,9 +57,10 @@ func New(
 		IngressPort: ingressPort,
 		EgressPort:  egressPort,
 
-		TracingDriver: tracingDriver,
-		TracingHost:   tracingHost,
-		TracingPort:   tracingPort,
+		TracingDriver:     tracingDriver,
+		TracingHost:       tracingHost,
+		TracingPort:       tracingPort,
+		TracingTagHeaders: tracingTagHeaders,
 
 		TLSEnabled: tlsEnabled,
 		TLSCert:    tlsCert,

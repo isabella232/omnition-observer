@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -75,6 +76,8 @@ func TestCMDBasic(t *testing.T) {
 	assert.Equal(t, egress.Address.SocketAddress.PortValue, 15002)
 	assert.Equal(t, len(egress.FilterChains), 3)
 	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.Tracing.OperationName, "egress")
+	var nilSlice []string
+	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.Tracing.RequestHeadersForTags, nilSlice) 
 	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_egress_cluster")
 	assert.Equal(t, egress.FilterChains[1].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_egress_cluster")
 
@@ -103,6 +106,7 @@ func TestCMDWithOptions(t *testing.T) {
 			"OBS_TRACING_DRIVER": "gibberish",
 			"OBS_TRACING_HOST":   "my-tracing-address",
 			"OBS_TRACING_PORT":   "6543",
+			"OBS_TRACING_TAG_HEADERS": "header1 header2 header3",
 			"OBS_EGRESS_PORT":    "54321",
 		},
 		map[string]string{
@@ -158,6 +162,13 @@ func TestCMDWithOptions(t *testing.T) {
 
 			case "OBS_TRACING_PORT":
 				assert.Equal(t, v, strconv.Itoa(c.StaticResources.Clusters[6].Hosts[0].SocketAddress.PortValue))
+
+			case "OBS_TRACING_TAG_HEADERS":
+				h1Chain := c.StaticResources.Listeners[0].FilterChains[0]
+				h2Chain := c.StaticResources.Listeners[0].FilterChains[1]
+				headers := strings.Split(v, " ")
+				assert.Equal(t, headers, h1Chain.Filters[0].Config.Tracing.RequestHeadersForTags)
+				assert.Equal(t, headers, h2Chain.Filters[0].Config.Tracing.RequestHeadersForTags)
 
 			case "OBS_TLS_ENABLED", "OBS_TLS_CERT", "OBS_TLS_KEY":
 				if envSet["OBS_TLS_ENABLED"] == "true" {

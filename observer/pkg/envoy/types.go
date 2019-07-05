@@ -74,7 +74,8 @@ type HTTPFilter struct {
 }
 
 type FilterConfigTracing struct {
-	OperationName string `yaml:"operation_name"`
+	OperationName         string   `yaml:"operation_name"`
+	RequestHeadersForTags []string `yaml:"request_headers_for_tags,omitempty"`
 }
 
 type FilterConfig struct {

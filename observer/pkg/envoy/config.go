@@ -58,7 +58,8 @@ func newFilterChain(
 					GenerateRequestID: true,
 					UseRemoteAddress:  true,
 					Tracing: FilterConfigTracing{
-						OperationName: drName,
+						OperationName:         drName,
+						RequestHeadersForTags: opts.TracingTagHeaders,
 					},
 					RouteConfig: RouteConfig{
 						Name: label + "_route",
@@ -164,7 +165,7 @@ func newListener(direction TrafficDirection, opts options.Options) Listener {
 
 	// HTTP1 Chain
 	chains = append(chains, newFilterChain(direction, HTTP1, false, opts))
-	// HTTP1 Chain
+	// HTTP2 Chain
 	chains = append(chains, newFilterChain(direction, HTTP2, false, opts))
 
 	if direction == INGRESS && opts.TLSEnabled {

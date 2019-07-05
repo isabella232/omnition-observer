@@ -45,6 +45,9 @@ func init() {
 	viper.SetDefault("tracing_port", 9411)
 	viper.BindEnv("tracing_port")
 
+	viper.SetDefault("tracing_tag_headers", []string{})
+	viper.BindEnv("tracing_tag_headers")
+
 	viper.SetDefault("timeout", "15s")
 	viper.BindEnv("timeout")
 }
@@ -57,6 +60,7 @@ func main() {
 		viper.GetString("tracing_driver"),
 		viper.GetString("tracing_host"),
 		viper.GetInt("tracing_port"),
+		viper.GetStringSlice("tracing_tag_headers"),
 
 		viper.GetBool("tls_enabled"),
 		viper.GetString("tls_ca_cert"),
