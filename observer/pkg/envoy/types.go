@@ -19,6 +19,10 @@ const (
 	INGRESS
 )
 
+func (direction TrafficDirection) String() string {
+	return [...]string{"INVALID", "OUTBOUND", "INBOUND"}[direction]
+}
+
 type SocketAddress struct {
 	Address   string
 	PortValue int `yaml:"port_value"`
@@ -70,15 +74,15 @@ type RouteConfig struct {
 
 type HTTPFilter struct {
 	Name   string
-	Config struct{}
+	Config struct{} `yaml:"typed_config"`
 }
 
 type FilterConfigTracing struct {
-	OperationName         string   `yaml:"operation_name"`
 	RequestHeadersForTags []string `yaml:"request_headers_for_tags,omitempty"`
 }
 
 type FilterConfig struct {
+	ConfigType        string              `yaml:"@type,omitempty"`
 	StatPrefix        string              `yaml:"stat_prefix"`
 	CodecType         string              `yaml:"codec_type,omitempty"`
 	GenerateRequestID bool                `yaml:"generate_request_id,omitempty"`
@@ -90,8 +94,8 @@ type FilterConfig struct {
 }
 
 type Filter struct {
-	Name   string
-	Config FilterConfig
+	Name        string
+	TypedConfig FilterConfig `yaml:"typed_config,omitempty"`
 }
 
 type DataSource struct {
@@ -129,11 +133,14 @@ type ListenerFilter struct {
 }
 
 type Listener struct {
-	Name            string
-	Address         Address
-	Transparent     bool
-	ListenerFilters []ListenerFilter `yaml:"listener_filters"`
-	FilterChains    []FilterChain    `yaml:"filter_chains"`
+	Name                    string
+	Direction               string `yaml:"traffic_direction"`
+	Address                 Address
+	FilterTimeout           *time.Duration `yaml:"listener_filters_timeout,omitempty"`
+	ContinueOnFilterTimeout bool           `yaml:"continue_on_listener_filters_timeout,omitempty"`
+	Transparent             bool
+	ListenerFilters         []ListenerFilter `yaml:"listener_filters"`
+	FilterChains            []FilterChain    `yaml:"filter_chains"`
 }
 
 type HTTP2ProtocolOptions struct {
@@ -160,8 +167,9 @@ type StaticResources struct {
 }
 
 type TracingHTTPConfig struct {
-	CollectorCluster  string `yaml:"collector_cluster"`
-	CollectorEndpoint string `yaml:"collector_endpoint"`
+	CollectorCluster         string `yaml:"collector_cluster"`
+	CollectorEndpoint        string `yaml:"collector_endpoint"`
+	CollectorEndpointVersion string `yaml:"collector_endpoint_version"`
 }
 
 type TracingHTTP struct {

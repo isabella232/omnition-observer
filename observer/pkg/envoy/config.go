@@ -25,7 +25,8 @@ func newFilterChain(
 			Filters: []Filter{
 				Filter{
 					Name: "envoy.tcp_proxy",
-					Config: FilterConfig{
+					TypedConfig: FilterConfig{
+						ConfigType: "type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy",
 						StatPrefix: drName + "_tcp",
 						Cluster:    "tcp_" + drName + "_cluster",
 					},
@@ -52,23 +53,23 @@ func newFilterChain(
 		Filters: []Filter{
 			Filter{
 				Name: "envoy.http_connection_manager",
-				Config: FilterConfig{
+				TypedConfig: FilterConfig{
+					ConfigType:        "type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager",
 					StatPrefix:        label,
-					CodecType:         "AUTO",
+					CodecType:         "auto",
 					GenerateRequestID: true,
 					UseRemoteAddress:  true,
 					Tracing: FilterConfigTracing{
-						OperationName:         drName,
 						RequestHeadersForTags: opts.TracingTagHeaders,
 					},
 					RouteConfig: RouteConfig{
 						Name: label + "_route",
 						VirtualHosts: []VirtualHost{
-							VirtualHost{
+							{
 								Name:    label + "_vhost",
 								Domains: []string{"*"},
 								Routes: []VirtualHostRoute{
-									VirtualHostRoute{
+									{
 										Match: VirtualHostRouteMatch{"/"},
 									},
 								},
@@ -76,8 +77,8 @@ func newFilterChain(
 						},
 					},
 					HTTPFilters: []HTTPFilter{
-						HTTPFilter{Name: "envoy.grpc_http1_bridge"},
-						HTTPFilter{Name: "envoy.router"},
+						{Name: "envoy.grpc_http1_bridge"},
+						{Name: "envoy.router"},
 					},
 				},
 			},
@@ -106,7 +107,7 @@ func newFilterChain(
 
 		if httpsRedirect {
 			// Setup HTTP > HTTPS redirect
-			chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Redirect = VirtualHostRouteRedirect{
+			chain.Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Redirect = VirtualHostRouteRedirect{
 				PathRedirect:  "/",
 				HTTPSRedirect: true,
 			}
@@ -115,13 +116,13 @@ func newFilterChain(
 			if direction == INGRESS {
 				chain.FilterChainMatch.TransportProtocol = "tls"
 			}
-			chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = newVirtualHostRouteCluster(
+			chain.Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Route = newVirtualHostRouteCluster(
 				direction, protoLabel+"_"+drName+"_cluster", opts,
 			)
 		}
 	} else {
 		// TLS not configured. Always handle route as is
-		chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = newVirtualHostRouteCluster(
+		chain.Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Route = newVirtualHostRouteCluster(
 			direction, protoLabel+"_"+drName+"_cluster", opts,
 		)
 	}
@@ -146,7 +147,8 @@ func newListener(direction TrafficDirection, opts options.Options) Listener {
 	}
 
 	listener := Listener{
-		Name: name,
+		Name:      name,
+		Direction: direction.String(),
 		Address: Address{
 			SocketAddress{
 				Address:   "0.0.0.0",
@@ -155,9 +157,8 @@ func newListener(direction TrafficDirection, opts options.Options) Listener {
 		},
 		Transparent: true,
 		ListenerFilters: []ListenerFilter{
-			ListenerFilter{"envoy.listener.original_dst"},
-			ListenerFilter{"envoy.listener.tls_inspector"},
-			ListenerFilter{"envoy.listener.text_protocol_inspector"},
+			{"envoy.listener.original_dst"},
+			{"envoy.listener.tls_inspector"},
 		},
 	}
 
@@ -202,7 +203,7 @@ func newCluster(direction TrafficDirection, protocol Protocol, opts options.Opti
 		Name:           protoLabel + "_" + drName + "_cluster",
 		ConnectTimeout: "0.5s",
 		Type:           "ORIGINAL_DST",
-		LBPolicy:       "ORIGINAL_DST_LB",
+		LBPolicy:       "CLUSTER_PROVIDED",
 	}
 	if protocol == HTTP2 {
 		c.HTTP2ProtocolOptions = HTTP2ProtocolOptions{
@@ -275,7 +276,8 @@ func New(opts options.Options) (Config, error) {
 				"envoy.zipkin",
 				TracingHTTPConfig{
 					"tracing_zipkin_cluster",
-					"/api/v1/spans",
+					"/api/v2/spans",
+					"HTTP_JSON",
 				},
 			},
 		},

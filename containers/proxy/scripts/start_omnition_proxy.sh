@@ -64,7 +64,7 @@ if [ $1 = "show-config" ];
 elif [ $1 = "run" ]
   then
   echo "starting envoy"
-  sg omnition-proxy -c "envoy -c /etc/envoy.yaml -l info --v2-config-only --service-cluster $SERVICE_NAME"
+  sg omnition-proxy -c "envoy -c /etc/envoy.yaml -l info --service-cluster $SERVICE_NAME"
 else
   $1
 fi

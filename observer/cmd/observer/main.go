@@ -2,17 +2,17 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
-
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
-	yaml "gopkg.in/yaml.v2"
 
 	"github.com/omnition/omnition-observer/observer/pkg/envoy"
 	"github.com/omnition/omnition-observer/observer/pkg/options"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
-func init() {
+func setup(out io.Writer) {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 
@@ -52,7 +52,7 @@ func init() {
 	viper.BindEnv("timeout")
 }
 
-func main() {
+func run(out io.Writer) {
 	opts, err := options.New(
 		viper.GetInt("ingress_port"),
 		viper.GetInt("egress_port"),
@@ -85,5 +85,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(serialized))
+
+	fmt.Fprintln(out, string(serialized))
+}
+
+func main() {
+	run(os.Stdout)
 }

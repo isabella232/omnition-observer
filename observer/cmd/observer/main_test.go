@@ -1,16 +1,16 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
+	"io/ioutil"
 	"os"
-	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 
 	"github.com/omnition/omnition-observer/observer/pkg/envoy"
 )
@@ -31,33 +31,13 @@ type testCase struct {
 	tracingPort    int
 }
 
-func TestMain(m *testing.M) {
-	err := os.Chdir("../../")
-	make := exec.Command("make", "go_build")
-	err = make.Run()
-	if err != nil {
-		fmt.Printf("could not build binary: %v", err)
-		os.Exit(1)
-	}
-	os.Exit(m.Run())
-}
-
 func TestCMDBasic(t *testing.T) {
-	dir, err := os.Getwd()
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cmd := exec.Command(path.Join(dir, "build/observer"))
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatal(err)
-	}
+	buf := new(bytes.Buffer)
+	run(buf)
 
 	c := envoy.Config{}
-	err = yaml.Unmarshal(output, &c)
+	decoder := yaml.NewDecoder(buf)
+	err := decoder.Decode(&c)
 
 	assert.Nil(t, err)
 	assert.Equal(t, len(c.StaticResources.Listeners), 2)
@@ -68,18 +48,16 @@ func TestCMDBasic(t *testing.T) {
 	assert.Equal(t, ingress.Name, "ingress_listener")
 	assert.Equal(t, ingress.Address.SocketAddress.PortValue, 15001)
 	assert.Equal(t, len(ingress.FilterChains), 3)
-	assert.Equal(t, ingress.FilterChains[0].Filters[0].Config.Tracing.OperationName, "ingress")
-	assert.Equal(t, ingress.FilterChains[0].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_ingress_cluster")
-	assert.Equal(t, ingress.FilterChains[1].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_ingress_cluster")
+	assert.Equal(t, ingress.FilterChains[0].Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_ingress_cluster")
+	assert.Equal(t, ingress.FilterChains[1].Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_ingress_cluster")
 
 	assert.Equal(t, egress.Name, "egress_listener")
 	assert.Equal(t, egress.Address.SocketAddress.PortValue, 15002)
 	assert.Equal(t, len(egress.FilterChains), 3)
-	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.Tracing.OperationName, "egress")
 	var nilSlice []string
-	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.Tracing.RequestHeadersForTags, nilSlice) 
-	assert.Equal(t, egress.FilterChains[0].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_egress_cluster")
-	assert.Equal(t, egress.FilterChains[1].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_egress_cluster")
+	assert.Equal(t, egress.FilterChains[0].Filters[0].TypedConfig.Tracing.RequestHeadersForTags, nilSlice)
+	assert.Equal(t, egress.FilterChains[0].Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_egress_cluster")
+	assert.Equal(t, egress.FilterChains[1].Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_egress_cluster")
 
 	assert.Equal(t, c.StaticResources.Clusters[0].Name, "h1_ingress_cluster")
 	assert.Equal(t, c.StaticResources.Clusters[1].Name, "h1_egress_cluster")
@@ -88,26 +66,21 @@ func TestCMDBasic(t *testing.T) {
 	assert.Equal(t, c.StaticResources.Clusters[4].Name, "tcp_ingress_cluster")
 	assert.Equal(t, c.StaticResources.Clusters[5].Name, "tcp_egress_cluster")
 	assert.Equal(t, c.StaticResources.Clusters[6].Name, "tracing_zipkin_cluster")
-
 }
 
 func TestCMDWithOptions(t *testing.T) {
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// TODO(owais): Improve tabel tests by storing expected results in the table
 	envSets := []map[string]string{
 		map[string]string{
-			"OBS_ADMIN_PORT":     "2020",
-			"OBS_ADMIN_LOG_PATH": "dasdkjasd",
-			"OBS_INGRESS_PORT":   "12345",
-			"OBS_TRACING_DRIVER": "gibberish",
-			"OBS_TRACING_HOST":   "my-tracing-address",
-			"OBS_TRACING_PORT":   "6543",
+			"OBS_ADMIN_PORT":          "2020",
+			"OBS_ADMIN_LOG_PATH":      "dasdkjasd",
+			"OBS_INGRESS_PORT":        "12345",
+			"OBS_TRACING_DRIVER":      "gibberish",
+			"OBS_TRACING_HOST":        "my-tracing-address",
+			"OBS_TRACING_PORT":        "6543",
 			"OBS_TRACING_TAG_HEADERS": "header1 header2 header3",
-			"OBS_EGRESS_PORT":    "54321",
+			"OBS_EGRESS_PORT":         "54321",
 		},
 		map[string]string{
 			"OBS_TLS_ENABLED": "true",
@@ -119,22 +92,26 @@ func TestCMDWithOptions(t *testing.T) {
 		},
 	}
 
+	defer func() { log.StandardLogger().ExitFunc = nil }()
+	var fatal bool
+	log.StandardLogger().ExitFunc = func(int) { fatal = true }
+
 	for _, envSet := range envSets {
-		cmd := exec.Command(path.Join(dir, "build/observer"))
+		fatal = false
 
-		envPairs := []string{}
 		for k, v := range envSet {
-			envPairs = append(envPairs, k+"="+v)
-		}
-
-		cmd.Env = append(os.Environ(), envPairs...)
-		output, cmdErr := cmd.CombinedOutput()
-
-		c := envoy.Config{}
-		if err == nil {
-			err = yaml.Unmarshal(output, &c)
+			err := os.Setenv(k, v)
 			assert.Nil(t, err)
 		}
+
+		buf := new(bytes.Buffer)
+		run(buf)
+
+		c := envoy.Config{}
+		output, err := ioutil.ReadAll(buf)
+		assert.Nil(t, err)
+		err = yaml.Unmarshal(output, &c)
+		assert.Nil(t, err)
 
 		for k, v := range envSet {
 			switch k {
@@ -167,14 +144,13 @@ func TestCMDWithOptions(t *testing.T) {
 				h1Chain := c.StaticResources.Listeners[0].FilterChains[0]
 				h2Chain := c.StaticResources.Listeners[0].FilterChains[1]
 				headers := strings.Split(v, " ")
-				assert.Equal(t, headers, h1Chain.Filters[0].Config.Tracing.RequestHeadersForTags)
-				assert.Equal(t, headers, h2Chain.Filters[0].Config.Tracing.RequestHeadersForTags)
+				assert.Equal(t, headers, h1Chain.Filters[0].TypedConfig.Tracing.RequestHeadersForTags)
+				assert.Equal(t, headers, h2Chain.Filters[0].TypedConfig.Tracing.RequestHeadersForTags)
 
 			case "OBS_TLS_ENABLED", "OBS_TLS_CERT", "OBS_TLS_KEY":
 				if envSet["OBS_TLS_ENABLED"] == "true" {
 					if envSet["OBS_TLS_CERT"] == "" || envSet["OBS_TLS_KEY"] == "" {
-						assert.NotNil(t, cmdErr)
-						assert.Contains(t, string(output), "TLS cannot be enabled without certificate cert and key")
+						assert.Equal(t, true, fatal)
 					} else {
 
 						httpChain := c.StaticResources.Listeners[0].FilterChains[0]
@@ -183,7 +159,7 @@ func TestCMDWithOptions(t *testing.T) {
 						certs1 := httpChain.TLSContext.CommonTLSContext.TLSCertificates[0]
 						assert.Equal(t, envSet["OBS_TLS_CERT"], certs1.CertificateChain.InlineString)
 						assert.Equal(t, envSet["OBS_TLS_KEY"], certs1.PrivateKey.InlineString)
-						route1 := httpChain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0]
+						route1 := httpChain.Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0]
 						assert.False(t, route1.Redirect.HTTPSRedirect)
 						assert.Empty(t, route1.Redirect.PathRedirect)
 						assert.Equal(t, "h1_ingress_cluster", route1.Route.Cluster)
@@ -191,17 +167,17 @@ func TestCMDWithOptions(t *testing.T) {
 						certs2 := http2Chain.TLSContext.CommonTLSContext.TLSCertificates[0]
 						assert.Equal(t, envSet["OBS_TLS_CERT"], certs2.CertificateChain.InlineString)
 						assert.Equal(t, envSet["OBS_TLS_KEY"], certs2.PrivateKey.InlineString)
-						route2 := http2Chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0]
+						route2 := http2Chain.Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0]
 						assert.False(t, route2.Redirect.HTTPSRedirect)
 						assert.Empty(t, route2.Redirect.PathRedirect)
 						assert.Equal(t, "h2_ingress_cluster", route2.Route.Cluster)
 
-						route3 := c.StaticResources.Listeners[0].FilterChains[2].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0]
+						route3 := c.StaticResources.Listeners[0].FilterChains[2].Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0]
 						assert.Empty(t, route3.Route.Cluster)
 						assert.Equal(t, true, route3.Redirect.HTTPSRedirect)
 						assert.Equal(t, "/", route3.Redirect.PathRedirect)
 
-						route4 := c.StaticResources.Listeners[0].FilterChains[3].Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0]
+						route4 := c.StaticResources.Listeners[0].FilterChains[3].Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0]
 						assert.Empty(t, route4.Route.Cluster)
 						assert.Equal(t, true, route4.Redirect.HTTPSRedirect)
 						assert.Equal(t, "/", route4.Redirect.PathRedirect)

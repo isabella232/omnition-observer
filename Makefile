@@ -1,15 +1,10 @@
 PROXY_VERSION?=$$(cat VERSION)
 
-.PHONY: build publish build-envoy
+.PHONY: build publish
 
 all: build
 
-build: build-envoy build-observer build-k8s-init build-container-proxy
-
-build-envoy:
-	@$(MAKE) -C envoy_filter build
-	@mkdir -p containers/proxy/bin
-	@cp envoy_filter/build/envoy containers/proxy/bin/
+build: build-observer build-k8s-init build-container-proxy
 
 build-observer:
 	@$(MAKE) -C observer build
