@@ -65,11 +65,11 @@ func newFilterChain(
 					RouteConfig: RouteConfig{
 						Name: label + "_route",
 						VirtualHosts: []VirtualHost{
-							{
+							VirtualHost{
 								Name:    label + "_vhost",
 								Domains: []string{"*"},
 								Routes: []VirtualHostRoute{
-									{
+									VirtualHostRoute{
 										Match: VirtualHostRouteMatch{"/"},
 									},
 								},
@@ -77,8 +77,8 @@ func newFilterChain(
 						},
 					},
 					HTTPFilters: []HTTPFilter{
-						{Name: "envoy.grpc_http1_bridge"},
-						{Name: "envoy.router"},
+						HTTPFilter{Name: "envoy.grpc_http1_bridge"},
+						HTTPFilter{Name: "envoy.router"},
 					},
 				},
 			},
@@ -88,7 +88,7 @@ func newFilterChain(
 	if opts.TLSEnabled {
 		// Setup TLS certificates
 		if direction == INGRESS && !httpsRedirect {
-			chain.TLSContext = TLSContext{
+			chain.TLSContext = &TLSContext{
 				CommonTLSContext{
 					ALPNProtocols: alpnProtocol,
 					TLSCertificates: []TLSCertificate{
@@ -157,8 +157,8 @@ func newListener(direction TrafficDirection, opts options.Options) Listener {
 		},
 		Transparent: true,
 		ListenerFilters: []ListenerFilter{
-			{"envoy.listener.original_dst"},
-			{"envoy.listener.tls_inspector"},
+			ListenerFilter{"envoy.listener.original_dst"},
+			ListenerFilter{"envoy.listener.tls_inspector"},
 		},
 	}
 

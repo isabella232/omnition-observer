@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/omnition/omnition-observer/observer/pkg/envoy"
@@ -12,7 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func setup(out io.Writer) {
+func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 
@@ -52,8 +51,36 @@ func setup(out io.Writer) {
 	viper.BindEnv("timeout")
 }
 
-func run(out io.Writer) {
-	opts, err := options.New(
+func main() {
+	serialized, err := run()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(string(serialized))
+}
+
+func run() ([]byte, error) {
+	opts, err := buildOptions()
+	if err != nil {
+		return nil, err
+	}
+
+	generated, err := generateConfig(&opts)
+	if err != nil {
+		return nil, err
+	}
+
+	serialized, err := yaml.Marshal(generated)
+	if err != nil {
+		return nil, err
+	}
+
+	return serialized, nil
+}
+
+func buildOptions() (options.Options, error) {
+	return options.New(
 		viper.GetInt("ingress_port"),
 		viper.GetInt("egress_port"),
 
@@ -72,23 +99,8 @@ func run(out io.Writer) {
 
 		viper.GetDuration("timeout"),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	generated, err := envoy.New(opts)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	serialized, err := yaml.Marshal(generated)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Fprintln(out, string(serialized))
 }
 
-func main() {
-	run(os.Stdout)
+func generateConfig(options *options.Options) (envoy.Config, error) {
+	return envoy.New(*options)
 }

@@ -20,7 +20,14 @@ const (
 )
 
 func (direction TrafficDirection) String() string {
-	return [...]string{"INVALID", "OUTBOUND", "INBOUND"}[direction]
+	switch direction {
+	case INGRESS:
+		return "INBOUND"
+	case EGRESS:
+		return "OUTBOUND"
+	default:
+		return ""
+	}
 }
 
 type SocketAddress struct {
@@ -125,7 +132,7 @@ type TLSContext struct {
 type FilterChain struct {
 	FilterChainMatch FilterChainMatch `yaml:"filter_chain_match,omitempty"`
 	Filters          []Filter
-	TLSContext       TLSContext `yaml:"tls_context,omitempty"`
+	TLSContext       *TLSContext `yaml:"tls_context,omitempty"`
 }
 
 type ListenerFilter struct {
