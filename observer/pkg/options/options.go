@@ -6,13 +6,6 @@ import (
 	"github.com/ansel1/merry"
 )
 
-// Tracing system identifiers
-const (
-	_ = iota
-	ZIPKIN
-	JAEGER
-)
-
 // Config ..
 type Options struct {
 	TLSEnabled bool
@@ -31,6 +24,9 @@ type Options struct {
 	TracingTagHeaders []string
 
 	TimeoutDuration time.Duration
+
+	FilterTimeoutDuration   time.Duration
+	ContinueOnFilterTimeout bool
 }
 
 func New(

@@ -32,7 +32,7 @@ func TestCMDBasic(t *testing.T) {
 	assert.Equal(t, egress.Address.SocketAddress.PortValue, 15002)
 	assert.Equal(t, len(egress.FilterChains), 3)
 	var nilSlice []string
-	assert.Equal(t, egress.FilterChains[0].Filters[0].TypedConfig.Tracing.RequestHeadersForTags, nilSlice)
+	assert.Equal(t, egress.FilterChains[0].Filters[0].TypedConfig.Tracing.CustomTags, nilSlice)
 	assert.Equal(t, egress.FilterChains[0].Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h1_egress_cluster")
 	assert.Equal(t, egress.FilterChains[1].Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Route.Cluster, "h2_egress_cluster")
 
@@ -79,8 +79,8 @@ func TestCMDWithOptions(t *testing.T) {
 		h1Chain := c.StaticResources.Listeners[0].FilterChains[0]
 		h2Chain := c.StaticResources.Listeners[0].FilterChains[1]
 		headers := strings.Split(envVariables["OBS_TRACING_TAG_HEADERS"], " ")
-		assert.Equal(t, headers, h1Chain.Filters[0].TypedConfig.Tracing.RequestHeadersForTags)
-		assert.Equal(t, headers, h2Chain.Filters[0].TypedConfig.Tracing.RequestHeadersForTags)
+		assert.Equal(t, headers, h1Chain.Filters[0].TypedConfig.Tracing.CustomTags)
+		assert.Equal(t, headers, h2Chain.Filters[0].TypedConfig.Tracing.CustomTags)
 
 		assert.Nil(t, c.StaticResources.Listeners[0].FilterChains[0].TLSContext)
 	})

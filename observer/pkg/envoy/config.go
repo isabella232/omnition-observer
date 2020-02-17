@@ -60,7 +60,8 @@ func newFilterChain(
 					GenerateRequestID: true,
 					UseRemoteAddress:  true,
 					Tracing: FilterConfigTracing{
-						RequestHeadersForTags: opts.TracingTagHeaders,
+						CustomTags:      opts.TracingTagHeaders,
+						OverallSampling: Value{100},
 					},
 					RouteConfig: RouteConfig{
 						Name: label + "_route",
@@ -158,6 +159,7 @@ func newListener(direction TrafficDirection, opts options.Options) Listener {
 		Transparent: true,
 		ListenerFilters: []ListenerFilter{
 			ListenerFilter{"envoy.listener.original_dst"},
+			ListenerFilter{"envoy.listener.http_inspector"},
 			ListenerFilter{"envoy.listener.tls_inspector"},
 		},
 	}
@@ -230,10 +232,11 @@ func newCluster(direction TrafficDirection, protocol Protocol, opts options.Opti
 func newTracingCluster(opts options.Options) Cluster {
 	// TODO(owais): Add support for jaeger native tracing
 	return Cluster{
-		Name:           "tracing_zipkin_cluster",
-		ConnectTimeout: "1s",
-		Type:           "strict_dns",
-		LBPolicy:       "round_robin",
+		Name:            "tracing_zipkin_cluster",
+		ConnectTimeout:  "1s",
+		Type:            "strict_dns",
+		LBPolicy:        "round_robin",
+		DnsLookupFamily: "V4_ONLY",
 		Hosts: []ClusterHost{
 			ClusterHost{
 				SocketAddress{
@@ -275,9 +278,10 @@ func New(opts options.Options) (Config, error) {
 			TracingHTTP{
 				"envoy.zipkin",
 				TracingHTTPConfig{
-					"tracing_zipkin_cluster",
-					"/api/v2/spans",
-					"HTTP_JSON",
+					ConfigType:               "type.googleapis.com/envoy.config.trace.v2.ZipkinConfig",
+					CollectorCluster:         "tracing_zipkin_cluster",
+					CollectorEndpoint:        "/api/v2/spans",
+					CollectorEndpointVersion: "HTTP_JSON",
 				},
 			},
 		},

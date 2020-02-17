@@ -85,11 +85,12 @@ type HTTPFilter struct {
 }
 
 type FilterConfigTracing struct {
-	RequestHeadersForTags []string `yaml:"request_headers_for_tags,omitempty"`
+	OverallSampling Value    `yaml:"overall_sampling,omitempty"`
+	CustomTags      []string `yaml:"custom_tags,omitempty"`
 }
 
 type FilterConfig struct {
-	ConfigType        string              `yaml:"@type,omitempty"`
+	ConfigType        string              `yaml:"@type"`
 	StatPrefix        string              `yaml:"stat_prefix"`
 	CodecType         string              `yaml:"codec_type,omitempty"`
 	GenerateRequestID bool                `yaml:"generate_request_id,omitempty"`
@@ -140,14 +141,12 @@ type ListenerFilter struct {
 }
 
 type Listener struct {
-	Name                    string
-	Direction               string `yaml:"traffic_direction"`
-	Address                 Address
-	FilterTimeout           *time.Duration `yaml:"listener_filters_timeout,omitempty"`
-	ContinueOnFilterTimeout bool           `yaml:"continue_on_listener_filters_timeout,omitempty"`
-	Transparent             bool
-	ListenerFilters         []ListenerFilter `yaml:"listener_filters"`
-	FilterChains            []FilterChain    `yaml:"filter_chains"`
+	Name            string
+	Direction       string `yaml:"traffic_direction"`
+	Address         Address
+	Transparent     bool
+	ListenerFilters []ListenerFilter `yaml:"listener_filters"`
+	FilterChains    []FilterChain    `yaml:"filter_chains"`
 }
 
 type HTTP2ProtocolOptions struct {
@@ -159,6 +158,7 @@ type Cluster struct {
 	ConnectTimeout       string `yaml:"connect_timeout"`
 	Type                 string
 	LBPolicy             string               `yaml:"lb_policy"`
+	DnsLookupFamily      string               `yaml:"dns_lookup_family,omitempty"`
 	HTTP2ProtocolOptions HTTP2ProtocolOptions `yaml:"http2_protocol_options,omitempty"`
 	TLSContext           TLSContext           `yaml:"tls_context,omitempty"`
 	Hosts                []ClusterHost        `yaml:"hosts,omitempty"`
@@ -174,14 +174,15 @@ type StaticResources struct {
 }
 
 type TracingHTTPConfig struct {
+	ConfigType               string `yaml:"@type"`
 	CollectorCluster         string `yaml:"collector_cluster"`
 	CollectorEndpoint        string `yaml:"collector_endpoint"`
-	CollectorEndpointVersion string `yaml:"collector_endpoint_version"`
+	CollectorEndpointVersion string `yaml:"collector_endpoint_version,omitempty"`
 }
 
 type TracingHTTP struct {
 	Name   string
-	Config TracingHTTPConfig
+	Config TracingHTTPConfig `yaml:"typed_config"`
 }
 type Tracing struct {
 	HTTP TracingHTTP
@@ -191,4 +192,8 @@ type Config struct {
 	Admin           Admin
 	StaticResources StaticResources `yaml:"static_resources"`
 	Tracing         Tracing
+}
+
+type Value struct {
+	Value float32 `yaml:"value"`
 }
