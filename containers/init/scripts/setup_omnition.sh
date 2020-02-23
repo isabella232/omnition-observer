@@ -26,6 +26,7 @@ iptables -t nat -X OMNITION_REDIRECT 2>/dev/null || true
 
 
 echo "Add new iptables rules"
+
 # new chain to envoy port
 iptables -t nat -N OMNITION_REDIRECT_INGRESS
 iptables -t nat -A OMNITION_REDIRECT_INGRESS -p tcp -j REDIRECT --to-port 15001
@@ -36,14 +37,18 @@ iptables -t nat -A OMNITION_REDIRECT_EGRESS -p tcp -j REDIRECT --to-port 15002
 # Inbound traffic
 iptables -t nat -N OMNITION_INBOUND
 iptables -t nat -A PREROUTING -p tcp -j OMNITION_INBOUND
+iptables -t nat -A OMNITION_INBOUND -p tcp --dport 22 -j RETURN         #SSH is not redirected
+iptables -t nat -A OMNITION_INBOUND -p tcp --dport 3306 -j RETURN       #MySql is not redirected
+
 iptables -t nat -A OMNITION_INBOUND -p tcp -j OMNITION_REDIRECT_INGRESS
 
 # Outbound traffic
 iptables -t nat -N OMNITION_OUTPUT
 iptables -t nat -A OUTPUT -p tcp -j OMNITION_OUTPUT
+iptables -t nat -A OMNITION_OUTPUT -p tcp --dport 22 -j RETURN         #SSH is not redirected
+iptables -t nat -A OMNITION_OUTPUT -p tcp --dport 3306 -j RETURN       #MySql is not redirected
 
 # Ignore outbound traffic originating from envoy process' gid
-# iptables -t nat -A OMNITION_OUTPUT -m owner --gid-owner omnition-proxy -j RETURN
 iptables -t nat -A OMNITION_OUTPUT -m owner --gid-owner omnition-proxy -j RETURN
 
 # redirect remaining outbound packets
