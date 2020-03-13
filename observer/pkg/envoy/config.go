@@ -1,6 +1,10 @@
 package envoy
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/omnition/omnition-observer/observer/pkg/options"
 )
 
@@ -229,28 +233,93 @@ func newCluster(direction TrafficDirection, protocol Protocol, opts options.Opti
 	return c
 }
 
-func newTracingCluster(opts options.Options) Cluster {
-	// TODO(owais): Add support for jaeger native tracing
-	return Cluster{
-		Name:            "tracing_zipkin_cluster",
-		ConnectTimeout:  "1s",
-		Type:            "strict_dns",
-		LBPolicy:        "round_robin",
-		DnsLookupFamily: "V4_ONLY",
-		Hosts: []ClusterHost{
-			ClusterHost{
-				SocketAddress{
-					Address:   opts.TracingHost,
-					PortValue: opts.TracingPort,
+func newTracingClusterIfRequired(opts options.Options) *Cluster {
+	if opts.TracingDriver == ZIPKIN {
+		return &Cluster{
+			Name:            "tracing_zipkin_cluster",
+			ConnectTimeout:  "1s",
+			Type:            "strict_dns",
+			LBPolicy:        "round_robin",
+			DnsLookupFamily: "V4_ONLY",
+			Hosts: []ClusterHost{
+				ClusterHost{
+					SocketAddress{
+						Address:   opts.TracingHost,
+						PortValue: opts.TracingPort,
+					},
+				},
+			},
+		}
+	}
+	return nil
+}
+
+func newTracingConfig(opts options.Options) (*Tracing, error) {
+	if strings.EqualFold(opts.TracingDriver, ZIPKIN) {
+		return newZipkinTracingConfig(), nil
+	} else if strings.EqualFold(opts.TracingDriver, JEAGER) {
+		return newJeagerTracingConfig(opts), nil
+	}
+	return nil, fmt.Errorf("invalid tracing driver [%s]. Supported values are: %s, %s", opts.TracingDriver, ZIPKIN, JEAGER)
+}
+
+func newZipkinTracingConfig() *Tracing {
+	return &Tracing{
+		Http: TracingHTTP{
+			Name: "envoy.zipkin",
+			Config: TracingZipkinConfig{
+				ConfigType:               "type.googleapis.com/envoy.config.trace.v2.ZipkinConfig",
+				CollectorCluster:         "tracing_zipkin_cluster",
+				CollectorEndpoint:        "/api/v2/spans",
+				CollectorEndpointVersion: "HTTP_JSON",
+			},
+		},
+	}
+}
+
+func newJeagerTracingConfig(opts options.Options) *Tracing {
+	return &Tracing{
+		Http: TracingHTTP{
+			Name: "envoy.dynamic.ot",
+			Config: TracingJeagerConfig{
+				ConfigType: "type.googleapis.com/envoy.config.trace.v2.DynamicOtConfig",
+				Library:    "/usr/local/lib/libjaegertracing_plugin.so",
+				JeagerConfig: JeagerConfig{
+					ServiceName: "proxy",
+					Sampler: JeagerConfigSampler{
+						SamplerType: "const",
+						Param:       1,
+					},
+					Reporter: JeagerConfigReporter{
+						CollectorEndpoint: "http://" + opts.TracingHost + ":" + strconv.Itoa(opts.TracingPort) + "/api/traces",
+					},
+					Tags: strings.Join(opts.TracingTagHeaders, ","),
 				},
 			},
 		},
 	}
 }
 
-func New(opts options.Options) (Config, error) {
+func buildClusterConfigurations(opts options.Options) []Cluster {
+	clusters := []Cluster{
+		newCluster(INGRESS, HTTP1, opts),
+		newCluster(EGRESS, HTTP1, opts),
+		newCluster(INGRESS, HTTP2, opts),
+		newCluster(EGRESS, HTTP2, opts),
+		newCluster(INGRESS, TCP, opts),
+		newCluster(EGRESS, TCP, opts),
+	}
+
+	if c := newTracingClusterIfRequired(opts); c != nil {
+		clusters = append(clusters, *c)
+	}
+
+	return clusters
+}
+
+func New(opts options.Options) (*Config, error) {
 	cfg := Config{
-		Admin{
+		Admin: Admin{
 			opts.AdminLogPath,
 			Address{
 				SocketAddress{
@@ -259,32 +328,20 @@ func New(opts options.Options) (Config, error) {
 				},
 			},
 		},
-		StaticResources{
+		StaticResources: StaticResources{
 			Listeners: []Listener{
 				newListener(INGRESS, opts),
 				newListener(EGRESS, opts),
 			},
-			Clusters: []Cluster{
-				newCluster(INGRESS, HTTP1, opts),
-				newCluster(EGRESS, HTTP1, opts),
-				newCluster(INGRESS, HTTP2, opts),
-				newCluster(EGRESS, HTTP2, opts),
-				newCluster(INGRESS, TCP, opts),
-				newCluster(EGRESS, TCP, opts),
-				newTracingCluster(opts),
-			},
-		},
-		Tracing{
-			TracingHTTP{
-				"envoy.zipkin",
-				TracingHTTPConfig{
-					ConfigType:               "type.googleapis.com/envoy.config.trace.v2.ZipkinConfig",
-					CollectorCluster:         "tracing_zipkin_cluster",
-					CollectorEndpoint:        "/api/v2/spans",
-					CollectorEndpointVersion: "HTTP_JSON",
-				},
-			},
+			Clusters: buildClusterConfigurations(opts),
 		},
 	}
-	return cfg, nil
+
+	tracingConfig, err := newTracingConfig(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.Tracing = *tracingConfig
+	return &cfg, nil
 }

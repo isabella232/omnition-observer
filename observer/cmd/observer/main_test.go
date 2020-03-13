@@ -51,7 +51,7 @@ func TestCMDWithOptions(t *testing.T) {
 			"OBS_ADMIN_PORT":          "2020",
 			"OBS_ADMIN_LOG_PATH":      "dasdkjasd",
 			"OBS_INGRESS_PORT":        "12345",
-			"OBS_TRACING_DRIVER":      "gibberish",
+			"OBS_TRACING_DRIVER":      "zipkin",
 			"OBS_TRACING_HOST":        "my-tracing-address",
 			"OBS_TRACING_PORT":        "6543",
 			"OBS_TRACING_TAG_HEADERS": "header1 header2 header3",
@@ -73,7 +73,7 @@ func TestCMDWithOptions(t *testing.T) {
 		assert.Equal(t, envVariables["OBS_EGRESS_PORT"], strconv.Itoa(c.StaticResources.Listeners[1].Address.SocketAddress.PortValue))
 		assert.Equal(t, "egress_listener", c.StaticResources.Listeners[1].Name)
 		// hardcoded to zipkin right now
-		assert.Equal(t, "envoy.zipkin", c.Tracing.HTTP.Name)
+		assert.Equal(t, "envoy.zipkin", c.Tracing.Http.Name)
 		assert.Equal(t, envVariables["OBS_TRACING_HOST"], c.StaticResources.Clusters[6].Hosts[0].SocketAddress.Address)
 		assert.Equal(t, envVariables["OBS_TRACING_PORT"], strconv.Itoa(c.StaticResources.Clusters[6].Hosts[0].SocketAddress.PortValue))
 		h1Chain := c.StaticResources.Listeners[0].FilterChains[0]

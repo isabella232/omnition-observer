@@ -71,7 +71,7 @@ func run() ([]byte, error) {
 		return nil, err
 	}
 
-	serialized, err := yaml.Marshal(generated)
+	serialized, err := yaml.Marshal(&generated)
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +101,6 @@ func buildOptions() (options.Options, error) {
 	)
 }
 
-func generateConfig(options *options.Options) (envoy.Config, error) {
+func generateConfig(options *options.Options) (*envoy.Config, error) {
 	return envoy.New(*options)
 }

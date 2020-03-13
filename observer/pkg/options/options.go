@@ -1,6 +1,7 @@
 package options
 
 import (
+	"strings"
 	"time"
 
 	"github.com/ansel1/merry"
@@ -24,9 +25,6 @@ type Options struct {
 	TracingTagHeaders []string
 
 	TimeoutDuration time.Duration
-
-	FilterTimeoutDuration   time.Duration
-	ContinueOnFilterTimeout bool
 }
 
 func New(
@@ -49,6 +47,12 @@ func New(
 			return Options{}, merry.New("TLS cannot be enabled without certificate cert and key")
 		}
 	}
+
+	// Defaulting to zipkin
+	if strings.Trim(tracingDriver, " ") == "" {
+		tracingDriver = "zipkin"
+	}
+
 	return Options{
 		IngressPort: ingressPort,
 		EgressPort:  egressPort,

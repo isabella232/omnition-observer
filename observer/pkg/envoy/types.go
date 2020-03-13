@@ -173,21 +173,6 @@ type StaticResources struct {
 	Clusters  []Cluster
 }
 
-type TracingHTTPConfig struct {
-	ConfigType               string `yaml:"@type"`
-	CollectorCluster         string `yaml:"collector_cluster"`
-	CollectorEndpoint        string `yaml:"collector_endpoint"`
-	CollectorEndpointVersion string `yaml:"collector_endpoint_version,omitempty"`
-}
-
-type TracingHTTP struct {
-	Name   string
-	Config TracingHTTPConfig `yaml:"typed_config"`
-}
-type Tracing struct {
-	HTTP TracingHTTP
-}
-
 type Config struct {
 	Admin           Admin
 	StaticResources StaticResources `yaml:"static_resources"`
