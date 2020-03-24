@@ -19,6 +19,17 @@ const (
 	INGRESS
 )
 
+func (direction TrafficDirection) String() string {
+	switch direction {
+	case INGRESS:
+		return "INBOUND"
+	case EGRESS:
+		return "OUTBOUND"
+	default:
+		return ""
+	}
+}
+
 type SocketAddress struct {
 	Address   string
 	PortValue int `yaml:"port_value"`
@@ -70,15 +81,16 @@ type RouteConfig struct {
 
 type HTTPFilter struct {
 	Name   string
-	Config struct{}
+	Config struct{} `yaml:"typed_config"`
 }
 
 type FilterConfigTracing struct {
-	OperationName         string   `yaml:"operation_name"`
-	RequestHeadersForTags []string `yaml:"request_headers_for_tags,omitempty"`
+	OverallSampling Value    `yaml:"overall_sampling,omitempty"`
+	CustomTags      []string `yaml:"custom_tags,omitempty"`
 }
 
 type FilterConfig struct {
+	ConfigType        string              `yaml:"@type"`
 	StatPrefix        string              `yaml:"stat_prefix"`
 	CodecType         string              `yaml:"codec_type,omitempty"`
 	GenerateRequestID bool                `yaml:"generate_request_id,omitempty"`
@@ -90,8 +102,8 @@ type FilterConfig struct {
 }
 
 type Filter struct {
-	Name   string
-	Config FilterConfig
+	Name        string
+	TypedConfig FilterConfig `yaml:"typed_config,omitempty"`
 }
 
 type DataSource struct {
@@ -121,7 +133,7 @@ type TLSContext struct {
 type FilterChain struct {
 	FilterChainMatch FilterChainMatch `yaml:"filter_chain_match,omitempty"`
 	Filters          []Filter
-	TLSContext       TLSContext `yaml:"tls_context,omitempty"`
+	TLSContext       *TLSContext `yaml:"tls_context,omitempty"`
 }
 
 type ListenerFilter struct {
@@ -130,6 +142,7 @@ type ListenerFilter struct {
 
 type Listener struct {
 	Name            string
+	Direction       string `yaml:"traffic_direction"`
 	Address         Address
 	Transparent     bool
 	ListenerFilters []ListenerFilter `yaml:"listener_filters"`
@@ -145,6 +158,7 @@ type Cluster struct {
 	ConnectTimeout       string `yaml:"connect_timeout"`
 	Type                 string
 	LBPolicy             string               `yaml:"lb_policy"`
+	DnsLookupFamily      string               `yaml:"dns_lookup_family,omitempty"`
 	HTTP2ProtocolOptions HTTP2ProtocolOptions `yaml:"http2_protocol_options,omitempty"`
 	TLSContext           TLSContext           `yaml:"tls_context,omitempty"`
 	Hosts                []ClusterHost        `yaml:"hosts,omitempty"`
@@ -159,21 +173,12 @@ type StaticResources struct {
 	Clusters  []Cluster
 }
 
-type TracingHTTPConfig struct {
-	CollectorCluster  string `yaml:"collector_cluster"`
-	CollectorEndpoint string `yaml:"collector_endpoint"`
-}
-
-type TracingHTTP struct {
-	Name   string
-	Config TracingHTTPConfig
-}
-type Tracing struct {
-	HTTP TracingHTTP
-}
-
 type Config struct {
 	Admin           Admin
 	StaticResources StaticResources `yaml:"static_resources"`
 	Tracing         Tracing
+}
+
+type Value struct {
+	Value float32 `yaml:"value"`
 }

@@ -1,29 +1,27 @@
-# FROM golang:1.11-rc-alpine
-FROM ubuntu:bionic
+FROM golang:1.13-alpine as builder
 
-RUN apt update
-RUN apt install -y curl
+WORKDIR /build
 
-RUN curl -o go.tar.gz https://dl.google.com/go/go1.11beta2.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go.tar.gz
+RUN apk --no-cache add upx
 
-ENV GO111MODULE=on
-ENV GOPATH=/src/caches/go
+COPY go.mod go.sum ./
+RUN go mod download
 
-RUN apt install -y build-essential git
+COPY cmd cmd
+COPY pkg pkg
 
-RUN gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4
-RUN curl -o /usr/local/bin/gosu -SL "https://github.com/tianon/gosu/releases/download/1.4/gosu-$(dpkg --print-architecture)" \
-    && curl -o /usr/local/bin/gosu.asc -SL "https://github.com/tianon/gosu/releases/download/1.4/gosu-$(dpkg --print-architecture).asc" \
-    && gpg --verify /usr/local/bin/gosu.asc \
-    && rm /usr/local/bin/gosu.asc \
-    && chmod +x /usr/local/bin/gosu
+ENV CGO_ENABLED=0
 
-RUN mkdir /src
+RUN go test -cover ./...
 
-WORKDIR /src
+RUN go build -ldflags="-s -w" ./cmd/observer && \
+	upx -4 observer
 
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+# ----------------
+FROM alpine:3.11
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+USER 1000:0
+WORKDIR /app
+COPY --from=builder ./build/observer ./observer
 
+ENTRYPOINT ["/app/observer"]

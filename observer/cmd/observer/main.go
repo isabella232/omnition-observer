@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
-	yaml "gopkg.in/yaml.v2"
-
 	"github.com/omnition/omnition-observer/observer/pkg/envoy"
 	"github.com/omnition/omnition-observer/observer/pkg/options"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
 func init() {
@@ -53,7 +52,35 @@ func init() {
 }
 
 func main() {
-	opts, err := options.New(
+	serialized, err := run()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(string(serialized))
+}
+
+func run() ([]byte, error) {
+	opts, err := buildOptions()
+	if err != nil {
+		return nil, err
+	}
+
+	generated, err := generateConfig(&opts)
+	if err != nil {
+		return nil, err
+	}
+
+	serialized, err := yaml.Marshal(&generated)
+	if err != nil {
+		return nil, err
+	}
+
+	return serialized, nil
+}
+
+func buildOptions() (options.Options, error) {
+	return options.New(
 		viper.GetInt("ingress_port"),
 		viper.GetInt("egress_port"),
 
@@ -72,18 +99,8 @@ func main() {
 
 		viper.GetDuration("timeout"),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
+}
 
-	generated, err := envoy.New(opts)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	serialized, err := yaml.Marshal(generated)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(serialized))
+func generateConfig(options *options.Options) (*envoy.Config, error) {
+	return envoy.New(*options)
 }

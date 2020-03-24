@@ -1,6 +1,10 @@
 package envoy
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/omnition/omnition-observer/observer/pkg/options"
 )
 
@@ -25,7 +29,8 @@ func newFilterChain(
 			Filters: []Filter{
 				Filter{
 					Name: "envoy.tcp_proxy",
-					Config: FilterConfig{
+					TypedConfig: FilterConfig{
+						ConfigType: "type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy",
 						StatPrefix: drName + "_tcp",
 						Cluster:    "tcp_" + drName + "_cluster",
 					},
@@ -52,14 +57,15 @@ func newFilterChain(
 		Filters: []Filter{
 			Filter{
 				Name: "envoy.http_connection_manager",
-				Config: FilterConfig{
+				TypedConfig: FilterConfig{
+					ConfigType:        "type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager",
 					StatPrefix:        label,
-					CodecType:         "AUTO",
+					CodecType:         "auto",
 					GenerateRequestID: true,
 					UseRemoteAddress:  true,
 					Tracing: FilterConfigTracing{
-						OperationName:         drName,
-						RequestHeadersForTags: opts.TracingTagHeaders,
+						CustomTags:      opts.TracingTagHeaders,
+						OverallSampling: Value{100},
 					},
 					RouteConfig: RouteConfig{
 						Name: label + "_route",
@@ -87,7 +93,7 @@ func newFilterChain(
 	if opts.TLSEnabled {
 		// Setup TLS certificates
 		if direction == INGRESS && !httpsRedirect {
-			chain.TLSContext = TLSContext{
+			chain.TLSContext = &TLSContext{
 				CommonTLSContext{
 					ALPNProtocols: alpnProtocol,
 					TLSCertificates: []TLSCertificate{
@@ -106,7 +112,7 @@ func newFilterChain(
 
 		if httpsRedirect {
 			// Setup HTTP > HTTPS redirect
-			chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Redirect = VirtualHostRouteRedirect{
+			chain.Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Redirect = VirtualHostRouteRedirect{
 				PathRedirect:  "/",
 				HTTPSRedirect: true,
 			}
@@ -115,13 +121,13 @@ func newFilterChain(
 			if direction == INGRESS {
 				chain.FilterChainMatch.TransportProtocol = "tls"
 			}
-			chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = newVirtualHostRouteCluster(
+			chain.Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Route = newVirtualHostRouteCluster(
 				direction, protoLabel+"_"+drName+"_cluster", opts,
 			)
 		}
 	} else {
 		// TLS not configured. Always handle route as is
-		chain.Filters[0].Config.RouteConfig.VirtualHosts[0].Routes[0].Route = newVirtualHostRouteCluster(
+		chain.Filters[0].TypedConfig.RouteConfig.VirtualHosts[0].Routes[0].Route = newVirtualHostRouteCluster(
 			direction, protoLabel+"_"+drName+"_cluster", opts,
 		)
 	}
@@ -146,7 +152,8 @@ func newListener(direction TrafficDirection, opts options.Options) Listener {
 	}
 
 	listener := Listener{
-		Name: name,
+		Name:      name,
+		Direction: direction.String(),
 		Address: Address{
 			SocketAddress{
 				Address:   "0.0.0.0",
@@ -156,8 +163,8 @@ func newListener(direction TrafficDirection, opts options.Options) Listener {
 		Transparent: true,
 		ListenerFilters: []ListenerFilter{
 			ListenerFilter{"envoy.listener.original_dst"},
+			ListenerFilter{"envoy.listener.http_inspector"},
 			ListenerFilter{"envoy.listener.tls_inspector"},
-			ListenerFilter{"envoy.listener.text_protocol_inspector"},
 		},
 	}
 
@@ -202,7 +209,7 @@ func newCluster(direction TrafficDirection, protocol Protocol, opts options.Opti
 		Name:           protoLabel + "_" + drName + "_cluster",
 		ConnectTimeout: "0.5s",
 		Type:           "ORIGINAL_DST",
-		LBPolicy:       "ORIGINAL_DST_LB",
+		LBPolicy:       "CLUSTER_PROVIDED",
 	}
 	if protocol == HTTP2 {
 		c.HTTP2ProtocolOptions = HTTP2ProtocolOptions{
@@ -226,27 +233,93 @@ func newCluster(direction TrafficDirection, protocol Protocol, opts options.Opti
 	return c
 }
 
-func newTracingCluster(opts options.Options) Cluster {
-	// TODO(owais): Add support for jaeger native tracing
-	return Cluster{
-		Name:           "tracing_zipkin_cluster",
-		ConnectTimeout: "1s",
-		Type:           "strict_dns",
-		LBPolicy:       "round_robin",
-		Hosts: []ClusterHost{
-			ClusterHost{
-				SocketAddress{
-					Address:   opts.TracingHost,
-					PortValue: opts.TracingPort,
+func newTracingClusterIfRequired(opts options.Options) *Cluster {
+	if opts.TracingDriver == ZIPKIN {
+		return &Cluster{
+			Name:            "tracing_zipkin_cluster",
+			ConnectTimeout:  "1s",
+			Type:            "strict_dns",
+			LBPolicy:        "round_robin",
+			DnsLookupFamily: "V4_ONLY",
+			Hosts: []ClusterHost{
+				ClusterHost{
+					SocketAddress{
+						Address:   opts.TracingHost,
+						PortValue: opts.TracingPort,
+					},
+				},
+			},
+		}
+	}
+	return nil
+}
+
+func newTracingConfig(opts options.Options) (*Tracing, error) {
+	if strings.EqualFold(opts.TracingDriver, ZIPKIN) {
+		return newZipkinTracingConfig(), nil
+	} else if strings.EqualFold(opts.TracingDriver, JEAGER) {
+		return newJeagerTracingConfig(opts), nil
+	}
+	return nil, fmt.Errorf("invalid tracing driver [%s]. Supported values are: %s, %s", opts.TracingDriver, ZIPKIN, JEAGER)
+}
+
+func newZipkinTracingConfig() *Tracing {
+	return &Tracing{
+		Http: TracingHTTP{
+			Name: "envoy.zipkin",
+			Config: TracingZipkinConfig{
+				ConfigType:               "type.googleapis.com/envoy.config.trace.v2.ZipkinConfig",
+				CollectorCluster:         "tracing_zipkin_cluster",
+				CollectorEndpoint:        "/api/v2/spans",
+				CollectorEndpointVersion: "HTTP_JSON",
+			},
+		},
+	}
+}
+
+func newJeagerTracingConfig(opts options.Options) *Tracing {
+	return &Tracing{
+		Http: TracingHTTP{
+			Name: "envoy.dynamic.ot",
+			Config: TracingJeagerConfig{
+				ConfigType: "type.googleapis.com/envoy.config.trace.v2.DynamicOtConfig",
+				Library:    "/usr/local/lib/libjaegertracing_plugin.so",
+				JeagerConfig: JeagerConfig{
+					ServiceName: "proxy",
+					Sampler: JeagerConfigSampler{
+						SamplerType: "const",
+						Param:       1,
+					},
+					Reporter: JeagerConfigReporter{
+						CollectorEndpoint: "http://" + opts.TracingHost + ":" + strconv.Itoa(opts.TracingPort) + "/api/traces",
+					},
+					Tags: strings.Join(opts.TracingTagHeaders, ","),
 				},
 			},
 		},
 	}
 }
 
-func New(opts options.Options) (Config, error) {
+func buildClusterConfigurations(opts options.Options) []Cluster {
+	clusters := []Cluster{
+		newCluster(INGRESS, HTTP1, opts),
+		newCluster(EGRESS, HTTP1, opts),
+		newCluster(INGRESS, HTTP2, opts),
+		newCluster(EGRESS, HTTP2, opts),
+		newCluster(INGRESS, TCP, opts),
+		newCluster(EGRESS, TCP, opts),
+	}
+
+	if c := newTracingClusterIfRequired(opts); c != nil {
+		clusters = append(clusters, *c)
+	}
+
+	return clusters
+}
+
+func New(opts options.Options) (*Config, error) {
 	cfg := Config{
-		Admin{
+		Admin: Admin{
 			opts.AdminLogPath,
 			Address{
 				SocketAddress{
@@ -255,30 +328,20 @@ func New(opts options.Options) (Config, error) {
 				},
 			},
 		},
-		StaticResources{
+		StaticResources: StaticResources{
 			Listeners: []Listener{
 				newListener(INGRESS, opts),
 				newListener(EGRESS, opts),
 			},
-			Clusters: []Cluster{
-				newCluster(INGRESS, HTTP1, opts),
-				newCluster(EGRESS, HTTP1, opts),
-				newCluster(INGRESS, HTTP2, opts),
-				newCluster(EGRESS, HTTP2, opts),
-				newCluster(INGRESS, TCP, opts),
-				newCluster(EGRESS, TCP, opts),
-				newTracingCluster(opts),
-			},
-		},
-		Tracing{
-			TracingHTTP{
-				"envoy.zipkin",
-				TracingHTTPConfig{
-					"tracing_zipkin_cluster",
-					"/api/v1/spans",
-				},
-			},
+			Clusters: buildClusterConfigurations(opts),
 		},
 	}
-	return cfg, nil
+
+	tracingConfig, err := newTracingConfig(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.Tracing = *tracingConfig
+	return &cfg, nil
 }

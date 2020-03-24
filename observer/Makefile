@@ -1,4 +1,4 @@
-.PHONY: build-image build run sh go_build
+.PHONY: build-image build run sh
 
 DOCKER_CMD ?= sh
 
@@ -11,27 +11,19 @@ endif
 
 # Docker commands
 build-image:
-	docker build -t observer-build .
+	docker build -t observer .
 
 build:
-	$(MAKE) docker_cmd DOCKER_CMD="make go_build"
+	$(MAKE) build-image
+	-docker rm observer-build
+	docker create --name observer-build observer
+	mkdir -p build
+	docker cp observer-build:/app/observer build/observer
+	docker rm observer-build
 
 sh:
 	$(MAKE) docker_cmd DOCKER_CMD="sh"
 
 docker_cmd: build-image
-	docker run $(docker_run_args) -e USER_ID=`id -u` -v "$(PWD)":"/src" observer-build $(DOCKER_CMD)
-
-# Native commands
-go_clean:
-	rm -f ./build/observer
-
-go_build: go_clean
-	go build -o build/observer ./cmd/observer
-
-go_run: go_build
-	./build/observer
-
-go_test:
-	go test -v ./cmd/observer
+	docker run $(docker_run_args) -e USER_ID=`id -u` -v "$(PWD)":"/src" observer $(DOCKER_CMD)
 

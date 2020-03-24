@@ -8,19 +8,23 @@ static_resources:
 
   - name: omnition_egress_listener
     address:
-      socket_address: { address: 0.0.0.0, port_value: 15002 }
+      socket_address:
+        address: 0.0.0.0
+        port_value: 15002
+    traffic_direction: OUTBOUND
     transparent: true
     listener_filters:
       - name: envoy.listener.original_dst
-      - name: envoy.listener.text_protocol_inspector
       - name: envoy.listener.tls_inspector
 
     filter_chains:
 
-    - filter_chain_match: {application_protocols: "http/1.1"}
+    - filter_chain_match:
+        application_protocols: "http/1.1"
       filters:
         - name: envoy.http_connection_manager
-          config:
+          typed_config:
+            "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
             stat_prefix: omnition
             codec_type: AUTO
             generate_request_id: true
@@ -42,7 +46,8 @@ static_resources:
             - name: envoy.router
               config: {}
 
-    - filter_chain_match: {application_protocols: "http/2"}
+    - filter_chain_match:
+        application_protocols: "h2"
       filters:
         - name: envoy.http_connection_manager
           config:
@@ -61,7 +66,8 @@ static_resources:
 
                   - match:
                       prefix: "/"
-                    route: { cluster: http2_egress_cluster }
+                    route:
+                      cluster: http2_egress_cluster
 
             http_filters:
             - name: envoy.grpc_http1_bridge
@@ -71,7 +77,8 @@ static_resources:
 
     - filters:
       - name: envoy.tcp_proxy
-        config:
+        typed_config:
+          '@type': type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy
           stat_prefix: egress_tcp
           cluster: tcp_egress_cluster
 
@@ -81,16 +88,18 @@ static_resources:
     address:
       socket_address: { address: 0.0.0.0, port_value: 15001 }
     transparent: true
+    traffic_direction: INBOUND
     listener_filters:
       - name: envoy.listener.original_dst
-      - name: envoy.listener.text_protocol_inspector
       - name: envoy.listener.tls_inspector
 
     filter_chains:
-    - filter_chain_match: {application_protocols: "http/1.1"}
+    - filter_chain_match:
+        application_protocols: "http/1.1"
       filters:
         - name: envoy.http_connection_manager
-          config:
+          type_config:
+            '@type': type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
             stat_prefix: omnition
             codec_type: AUTO
             generate_request_id: true
@@ -107,7 +116,8 @@ static_resources:
                   routes:
                   - match:
                       prefix: "/"
-                    route: { cluster: http_ingress_cluster }
+                    route:
+                      cluster: http_ingress_cluster
             http_filters:
             - name: envoy.grpc_http1_bridge
               config: {}
@@ -122,10 +132,12 @@ static_resources:
               private_key:
                 inline_string: "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCzMsqReBRBJtcf\nEjtwFQd7SdYpdGesgl35kPJVYRHeYikwRTVAubpaH9qyB0Z+qw4zfVJS92w4VOoy\nZ1MTTaqXad1qwRBR+Yz+biMt1Ry8EcNIPnliWSOCMNSeFtM+1MRKGsxYslucMDIS\ncI4sCZb6Zd8vR2htSLbu2S1MNak88z4CVQ7qu+OnVjM7NFyTCzTU255dPlU51QNi\nCj6PrOGaWhP+KpGUiMXjczBK+5on4ZMOcwTeG7dy/kmqYbqdmRFJuDSnKOIRCRkr\ncan2+oOni9v+XOGIHM5TLrkJ7kflIR+0T5YWrYc42tAPH1CFpIc8/EP9zbpQmWTP\nty/gU4d7AgMBAAECggEAOmY9GfdWMn1j8h5Q/I/95jID93KWLuQ1mBWixCxkVGMN\nJUwItNVSY/ipnwc79B/u+tzGrX8w55LU2CRQMKRJChtYK2hL10tKpchi8pbXTHtF\ndw/VIzYFmnIreHHb2kggyD2/htBphpc2WkgQLU3axDPa7l+JKsRdya1BU+rRAql/\nWVKz+PX1SaOSTsgfWZM5GzOMUpWMGVbrmA7XJ2qBDv06P8JnFktnSevF0WqvXERF\ngjId0xoG909Sbm9At47XZ44Smgycf0IuVonFw6OBcMpESZ7a+FcCiy4t0ZIoKFGN\nPkMoAlh19h5VpOi5xkVpZUzqCJN90QP/50z0pUFpQQKBgQDYcc5py9Tza/LORTeQ\nuZXsPUWHF5YBwmrRY7C0V5w5SQMHfyrOtXcVfvoFcOw1VObIljdHbJcFBkLG2z4v\nzcO1O+rkDcBaOIGjbkY3nf0rhxU7Ft7cLKfgjgFHyyDQssiiDUx3WptnRgJz6VtG\n8dA1gbwS5Fl0hIBCO374GF6fcQKBgQDT8nO9Q8vYxJhl0dUGUkuo1fROxC9ORx9X\nttXSWTkLi4qTCmn/CI8qOksYhdDE2H9og2iwE4ZZqc91gedn7CZl+UOXmothOmA4\n3Vz4Q4sOMVfoOSDPQu7v5scqJYMbWmgmZUBdsRweGIaqTmT0hJGbv9NjvCjmKm5q\n3SILT1n3qwKBgCQDC2ze1ReLJmLbcVtLBX7A0wifC/5O8qbUB1p6GSwO0co1hlHO\nL3oMHl05ZJObBKrrE1d24cmcORAM+lPJ0H4e8f3vq8lXDXq7pkMqrizH1Oh37ayE\nYYojFmNzkIootOkBfW9+S8zrAQ14Dg/Hu/SrGTerdpbEVPKwI3fz1gqBAoGAB2s3\nLerPmdjX1MiRglUjHNfQY2lulnja2gEmXuSMoKDTyu3UY/7ys/GyaztT4XAKlafz\n5CXqz/ynrF9NsE+N0If3G7lnI5IdiCAHfxEuLuL/RrupMFgRcQhM9Ga3vh9eAeoN\nZLosV8lX/WIdGooBZshCJ/2QGO5nSwpOhMLUTV0CgYA7mB5sxHbhXNZopQ4lAPvl\nR3vSdds45p74vjCUw354Vq7OfhgmEYKSzRuBrH7ARhXT1zRUBaAEIxlYdNP85psU\ndUxK20lbU5+RLg/ZtKygBCzOCsrbx1Frdt+f5I4RWulP4h9m9+jYeg/SkTWKOiHW\nDJBwFxGQLwD6cGvhuUoC5Q==\n-----END PRIVATE KEY-----"
 
-    - filter_chain_match: {application_protocols: "http/2"}
+    - filter_chain_match:
+        application_protocols: "h2"
       filters:
         - name: envoy.http_connection_manager
-          config:
+          typed_config:
+            '@type': type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
             stat_prefix: omnition
             codec_type: AUTO
             generate_request_id: true
@@ -141,7 +153,8 @@ static_resources:
 
                   - match:
                       prefix: "/"
-                    route: { cluster: http2_ingress_cluster }
+                    route:
+                      cluster: http2_ingress_cluster
 
             http_filters:
             - name: envoy.grpc_http1_bridge
@@ -151,7 +164,8 @@ static_resources:
 
     - filters:
       - name: envoy.tcp_proxy
-        config:
+        typed_config:
+          '@type': type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy
           stat_prefix: ingress_tcp
           cluster: tcp_ingress_cluster
 
@@ -159,36 +173,36 @@ static_resources:
   - name: http_egress_cluster
     connect_timeout: 0.25s
     type: ORIGINAL_DST
-    lb_policy: ORIGINAL_DST_LB
+    lb_policy: CLUSTER_PROVIDED
 
   - name: http2_egress_cluster
     connect_timeout: 0.25s
     type: ORIGINAL_DST
-    lb_policy: ORIGINAL_DST_LB
+    lb_policy: CLUSTER_PROVIDED
     features: "http2"
     http2_protocol_options: {}
 
   - name: tcp_egress_cluster
     connect_timeout: 0.25s
     type: ORIGINAL_DST
-    lb_policy: ORIGINAL_DST_LB
+    lb_policy: CLUSTER_PROVIDED
 
   - name: http_ingress_cluster
     connect_timeout: 0.25s
     type: ORIGINAL_DST
-    lb_policy: ORIGINAL_DST_LB
+    lb_policy: CLUSTER_PROVIDED
 
   - name: http2_ingress_cluster
     connect_timeout: 0.25s
     type: ORIGINAL_DST
-    lb_policy: ORIGINAL_DST_LB
+    lb_policy: CLUSTER_PROVIDED
     features: "http2"
     http2_protocol_options: {}
 
   - name: tcp_ingress_cluster
     connect_timeout: 0.25s
     type: ORIGINAL_DST
-    lb_policy: ORIGINAL_DST_LB
+    lb_policy: CLUSTER_PROVIDED
 
   - name: zipkin_cluster
     connect_timeout: 1s
@@ -203,5 +217,6 @@ tracing:
   http:
     name: envoy.zipkin
     config:
-      collector_cluster: zipkin_cluster
-      collector_endpoint: "/api/v1/spans"
+      collector_cluster: tracing_zipkin_cluster
+      collector_endpoint: /api/v2/spans
+      collector_endpoint_version: HTTP_JSON
