@@ -6,10 +6,6 @@ build:
 	docker build -t omnition/omnition-observer .
 
 publish: build
-	docker tag omnition/omnition-observer:latest $(DOCKER_REGISTRY)/omnition/omnition-observer:$(PROXY_VERSION)
-	docker push $(DOCKER_REGISTRY)/omnition/omnition-observer:$(PROXY_VERSION)
-
-publish-public: build
 	docker tag omnition/omnition-observer:latest omnition/omnition-observer:$(PROXY_VERSION)
 	docker push omnition/omnition-observer:$(PROXY_VERSION)
 
