@@ -95,6 +95,7 @@ type FilterConfig struct {
 	CodecType         string              `yaml:"codec_type,omitempty"`
 	GenerateRequestID bool                `yaml:"generate_request_id,omitempty"`
 	UseRemoteAddress  bool                `yaml:"use_remote_address,omitempty"`
+	TrustedHopsCount  int                 `yaml:"xff_num_trusted_hops,omitempty"`
 	Tracing           FilterConfigTracing `yaml:",omitempty"`
 	RouteConfig       RouteConfig         `yaml:"route_config,omitempty"`
 	HTTPFilters       []HTTPFilter        `yaml:"http_filters,omitempty"`

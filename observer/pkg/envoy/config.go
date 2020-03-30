@@ -63,6 +63,7 @@ func newFilterChain(
 					CodecType:         "auto",
 					GenerateRequestID: true,
 					UseRemoteAddress:  true,
+					TrustedHopsCount:  opts.TrustedHopsCount,
 					Tracing: FilterConfigTracing{
 						CustomTags:      opts.TracingTagHeaders,
 						OverallSampling: Value{100},

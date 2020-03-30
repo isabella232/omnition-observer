@@ -24,7 +24,8 @@ type Options struct {
 	TracingPort       int
 	TracingTagHeaders []string
 
-	TimeoutDuration time.Duration
+	TimeoutDuration  time.Duration
+	TrustedHopsCount int
 }
 
 func New(
@@ -41,6 +42,7 @@ func New(
 	adminPort int,
 	adminLogPath string,
 	timeoutDuration time.Duration,
+	numTrustedHops int,
 ) (Options, error) {
 	if tlsEnabled {
 		if tlsCert == "" || tlsKey == "" {
@@ -70,6 +72,7 @@ func New(
 		AdminPort:    adminPort,
 		AdminLogPath: adminLogPath,
 
-		TimeoutDuration: timeoutDuration,
+		TimeoutDuration:  timeoutDuration,
+		TrustedHopsCount: numTrustedHops,
 	}, nil
 }
