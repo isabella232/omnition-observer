@@ -98,6 +98,7 @@ func buildOptions() (options.Options, error) {
 		viper.GetString("admin_log_path"),
 
 		viper.GetDuration("timeout"),
+		viper.GetInt("num_trusted_hops"),
 	)
 }
 
