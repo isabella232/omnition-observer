@@ -56,6 +56,7 @@ func TestCMDWithOptions(t *testing.T) {
 			"OBS_TRACING_PORT":        "6543",
 			"OBS_TRACING_TAG_HEADERS": "header1 header2 header3",
 			"OBS_EGRESS_PORT":         "54321",
+			"OBS_NUM_TRUSTED_HOPS":    "2",
 		}
 		setEnvironmentVariables(t, envVariables)
 
@@ -81,6 +82,7 @@ func TestCMDWithOptions(t *testing.T) {
 		headers := strings.Split(envVariables["OBS_TRACING_TAG_HEADERS"], " ")
 		assert.Equal(t, headers, h1Chain.Filters[0].TypedConfig.Tracing.CustomTags)
 		assert.Equal(t, headers, h2Chain.Filters[0].TypedConfig.Tracing.CustomTags)
+		assert.Equal(t, envVariables["OBS_NUM_TRUSTED_HOPS"], strconv.Itoa(h1Chain.Filters[0].TypedConfig.TrustedHopsCount))
 
 		assert.Nil(t, c.StaticResources.Listeners[0].FilterChains[0].TLSContext)
 	})

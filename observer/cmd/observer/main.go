@@ -49,6 +49,9 @@ func init() {
 
 	viper.SetDefault("timeout", "15s")
 	viper.BindEnv("timeout")
+
+	viper.SetDefault("num_trusted_hops", "0")
+	viper.BindEnv("num_trusted_hops")
 }
 
 func main() {
